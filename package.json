@@ -1,5 +1,5 @@
 {
-  "name": "Sketch",
+  "name": "sketch",
   "private": true,
   "scripts": {
     "build": "turbo run build",
