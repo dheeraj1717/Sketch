@@ -70,6 +70,14 @@ wss.on("connection", (ws, request) => {
         return;
       }
       const message = parsedData.message;
+
+      await client.chat.create({
+        data: {
+          message,
+          roomId,
+          userId,
+        },
+      })
       users.forEach((user) => {
         if (user.rooms.includes(roomId)) {
           user.ws.send(
