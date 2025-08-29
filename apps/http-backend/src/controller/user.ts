@@ -19,10 +19,10 @@ const authRouter : express.Router = express.Router();
 const client = prismaClient;
 const createTokens = async (userId: string) => {
   const accessToken = jwt.sign({ userId }, JWT_SECRET, {
-    expiresIn: "15m",
+    expiresIn: "1d",
   });
   const refreshToken = jwt.sign({ userId }, REFRESH_JWT_SECRET, {
-    expiresIn: "1d",
+    expiresIn: "7d",
   });
   await client.refreshToken.deleteMany({
     where: {
@@ -82,13 +82,13 @@ authRouter.post("/signup", async (req: Request, res: Response) => {
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
     sameSite: "strict",
-    maxAge: 15 * 60 * 1000, // 15 min
+    maxAge: 24 * 60 * 60 * 1000, // 1 day
   });
 
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     sameSite: "strict",
-    maxAge: 24 * 60 * 60 * 1000, // 1 day
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 
   return res.status(201).json({
@@ -144,12 +144,12 @@ authRouter.post("/signin", async (req: Request, res: Response) => {
     .cookie("accessToken", accessToken, {
       httpOnly: true,
       sameSite: "strict",
-      maxAge: 15 * 60 * 1000,
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
     })
     .cookie("refreshToken", refreshToken, {
       httpOnly: true,
       sameSite: "strict",
-      maxAge: 24 * 60 * 60 * 1000,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     })
     .json({ message: "Signed In Successfully!" });
 });
