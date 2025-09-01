@@ -14,18 +14,6 @@ app.get("/", (req, res) => {
 app.use("/auth", authRouter);
 app.use("/room", roomRouter);
 
-// app.post("/room", middleware, (req, res) => {
-//   const data = CreateRoomSchema.safeParse(req.body);
-//   if (!data.success)
-//     return res.json({
-//       message: "Incorrect inputs",
-//     });
-
-//   res.json({
-//     roomId: 123,
-//   });
-// });
-
 app.listen(8000, () => {
   console.log("Server is running on port 8000");
 });
