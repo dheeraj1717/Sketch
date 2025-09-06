@@ -1,5 +1,6 @@
 import { Zap, Users, Maximize } from "lucide-react";
 import InforCard from "./_ui/InforCard";
+import CTAButtons from "./components/CTAButtons";
 export const featureCards = [
   {
     id: 1,
@@ -24,7 +25,7 @@ export const featureCards = [
 export default function Home() {
   return (
     <div
-      className="h-screen relative overflow-hidden bg-cover bg-center bg-no-repeat"
+      className="min-h-screen relative overflow-hidden bg-cover bg-center bg-no-repeat"
       style={{
         backgroundImage: `url('/background.jpg')`,
         backgroundAttachment: "fixed", // Optional: creates parallax effect
@@ -43,7 +44,7 @@ export default function Home() {
       </div>
 
       {/* Main content */}
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-8 text-center">
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-8 text-center py-10">
         {/* Logo */}
         <div className="mb-8">
           <div className="w-16 h-16 bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg mb-4 mx-auto relative">
@@ -87,12 +88,7 @@ export default function Home() {
         </div>
 
         {/* CTA buttons */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <button className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold px-8 py-4 rounded-2xl shadow-lg transition-all duration-200 transform hover:scale-105 flex items-center justify-center gap-2 cursor-pointer">
-            Start Creating
-            <span className="text-lg">✨</span>
-          </button>
-        </div>
+        <CTAButtons />
       </div>
     </div>
   );
