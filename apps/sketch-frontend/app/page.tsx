@@ -1,6 +1,6 @@
 import { Zap, Users, Maximize } from "lucide-react";
 import InforCard from "./_ui/InforCard";
-import CTAButtons from "./components/CTAButtons";
+import CTAButtons from "../components/CTAButtons";
 export const featureCards = [
   {
     id: 1,

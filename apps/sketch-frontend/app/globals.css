@@ -1,2 +1,7 @@
 @import "tailwindcss";
 
+@layer{
+    .input-primary{
+        @apply w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-purple-500;
+    }
+}
