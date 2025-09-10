@@ -69,26 +69,49 @@ wss.on("connection", (ws, request) => {
       if (!user) {
         return;
       }
-      const message = parsedData.message;
+      const shapeData = parsedData.shape;
 
-      await client.chat.create({
+      // Create shape with all required fields according to new schema
+      const newShape = await client.shapes.create({
+        // Changed from shapes to shape
         data: {
-          message,
-          roomId,
-          userId,
+          type: shapeData.type, // Required field
+          x: shapeData.x, // Required field (Float)
+          y: shapeData.y, // Required field (Float)
+          width: shapeData.width || null, // Optional
+          height: shapeData.height || null, // Optional
+          radius: shapeData.radius || null, // Optional
+          fill: shapeData.fill || null, // Optional
+          stroke: shapeData.stroke || null, // Optional
+          strokeWidth: shapeData.strokeWidth || 1, // Optional with default
+          opacity: shapeData.opacity || 1, // Optional with default
+          text: shapeData.text || null, // Optional
+          fontSize: shapeData.fontSize || null, // Optional
+          fontFamily: shapeData.fontFamily || null, // Optional
+          points: shapeData.points || null, // Optional JSON field
+          roomId: roomId, // Required foreign key
         },
-      })
+      });
+
       users.forEach((user) => {
         if (user.rooms.includes(roomId)) {
           user.ws.send(
             JSON.stringify({
-              type: "chat",
-              message,
-              roomId,
+              type: "newShape", // Changed from chat
+              shape: newShape, // Send the complete shape object
+              canvasId: roomId,
             })
           );
         }
       });
+    }
+  });
+
+  ws.on("close", () => {
+    // Clean up user when they disconnect
+    const userIndex = users.findIndex((user) => user.ws === ws);
+    if (userIndex !== -1) {
+      users.splice(userIndex, 1);
     }
   });
 });

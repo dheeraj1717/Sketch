@@ -1,17 +1,14 @@
-"use client";
-import { intiDraw } from "@/draw";
-import { useEffect, useRef } from "react";
+import { RoomCanvas } from "@/components/RoomCanvas";
 
-const Canvas = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    if (canvasRef.current) {
-      const canvas = canvasRef.current;
-
-      intiDraw(canvas);
-    }
-  }, [canvasRef]);
-  return <canvas ref={canvasRef} height={"800px"} width={"800px"}></canvas>;
+const CanvasPage = ({
+  params,
+}: {
+  params: {
+    roomId: string;
+  };
+}) => {
+  const roomId = params.roomId;
+  return <RoomCanvas roomId={roomId} />;
 };
 
-export default Canvas;
+export default CanvasPage;

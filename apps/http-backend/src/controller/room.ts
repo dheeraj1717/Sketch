@@ -51,24 +51,21 @@ roomRouter.post(
   }
 );
 
-roomRouter.get("/chat/:roomId", async (req: AuthenticatedRequest, res) => {
+roomRouter.get("/canvas/:roomId", async (req: AuthenticatedRequest, res) => {
   const roomId = req.params.roomId;
-  if(!roomId) {
+  if (!roomId) {
     return res.status(400).json({
       message: "Incorrect inputs",
     });
   }
-  const messages = await client.chat.findMany({
+  const shapes = await client.shapes.findMany({
     where: {
       roomId: roomId,
     },
-    orderBy: {
-      createdAt: "asc",
-    },
     take: 50,
   });
-  res.status(200).json({
-    messages: messages,
+  res.status(200).json({ 
+    shapes: shapes,
   });
 });
 

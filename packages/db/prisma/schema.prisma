@@ -24,16 +24,35 @@ model Room {
   createdAt DateTime @default(now())
   adminId   String
   admin     User     @relation(fields: [adminId], references: [id])
-  chats     Chat[]
+  Shapes    Shapes[]
 }
 
-model Chat {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  message   String
-  roomId    String
-  userId    String
-  room      Room     @relation(fields: [roomId], references: [id])
+model Shapes {
+  id     String @id @default(uuid())
+  type   String // "rectangle", "circle", "line", "text", etc.
+  x      Float
+  y      Float
+  width  Float?
+  height Float?
+  radius Float?
+
+  // Style properties
+  fill        String? // color in hex format
+  stroke      String? // border color
+  strokeWidth Float?  @default(1)
+  opacity     Float?  @default(1)
+
+  // Text properties (for text shapes)
+  text       String?
+  fontSize   Float?
+  fontFamily String?
+
+  // Line/Path properties
+  points Json? // For complex shapes, store array of points
+
+  roomId String
+  room   Room    @relation(fields: [roomId], references: [id])
+  chatId String?
 }
 
 model RefreshToken {
