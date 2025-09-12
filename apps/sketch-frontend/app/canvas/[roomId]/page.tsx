@@ -1,13 +1,13 @@
 import { RoomCanvas } from "@/components/RoomCanvas";
 
-const CanvasPage = ({
+const CanvasPage = async ({
   params,
 }: {
   params: {
     roomId: string;
   };
 }) => {
-  const roomId = params.roomId;
+  const roomId = (await params).roomId;
   return <RoomCanvas roomId={roomId} />;
 };
 

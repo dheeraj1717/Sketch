@@ -15,12 +15,25 @@ type Shapes =
       centerY: number;
       radius: number;
     };
-export async function intiDraw(canvas: HTMLCanvasElement, roomId: string) {
+export async function intiDraw(
+  canvas: HTMLCanvasElement,
+  roomId: string,
+  socket: WebSocket
+) {
   const ctx = canvas.getContext("2d");
+  console.log("------------")
   const shapes = await getExistingShapes(roomId);
   let existingShapes: Shapes[] = shapes;
   if (!ctx) return;
-
+  socket.onmessage = (event) => {
+    const message = JSON.parse(event.data);
+    console.log("xxxxxxxxxxxx",message);
+    if (message.type === "chat") {
+      const parsedShapes = message.shape;
+      existingShapes.push(parsedShapes);
+      clearCanvas(existingShapes, canvas, ctx);
+    }
+  };
   ctx.fillStyle = "rgba(0,0,0)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   clearCanvas(existingShapes, canvas, ctx);
@@ -43,24 +56,28 @@ export async function intiDraw(canvas: HTMLCanvasElement, roomId: string) {
   });
 
   canvas.addEventListener("mouseup", (e) => {
-    if (!clicked) return;
-    clicked = false;
+  if (!clicked) return;
+  clicked = false;
 
-    const coords = getCanvasCoordinates(e);
-    const width = coords.x - startX;
-    const height = coords.y - startY;
+  const coords = getCanvasCoordinates(e);
+  const width = coords.x - startX;
+  const height = coords.y - startY;
 
-    // Only add shape if it has some size
-    if (Math.abs(width) > 1 || Math.abs(height) > 1) {
-      existingShapes.push({
-        type: "rect",
-        x: startX,
-        y: startY,
-        width,
-        height,
-      });
-    }
-  });
+  if (Math.abs(width) > 1 || Math.abs(height) > 1) {
+    const newShape = {
+      type: "rect" as const,
+      x: startX,
+      y: startY,
+      width,
+      height,
+    };
+    existingShapes.push(newShape);
+
+    // Send only the new shape
+    socket.send(JSON.stringify({ type: "chat", shape: newShape, roomId }));
+  }
+});
+
   canvas.addEventListener("mousemove", (e) => {
     if (clicked) {
       const coords = getCanvasCoordinates(e);
@@ -105,6 +122,7 @@ function clearCanvas(
 async function getExistingShapes(roomId: string) {
   const res = await axios.get(`${API_BASE}/room/canvas/${roomId}`);
   const shapes = res.data.shapes;
+  console.log("shapesrendered",shapes);
 
   const mappedShapes = shapes.map((shape: any) => {
     if (shape.type === "rectangle" || shape.type === "rect") {

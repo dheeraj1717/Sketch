@@ -97,9 +97,9 @@ wss.on("connection", (ws, request) => {
         if (user.rooms.includes(roomId)) {
           user.ws.send(
             JSON.stringify({
-              type: "newShape", // Changed from chat
+              type: "chat",
               shape: newShape, // Send the complete shape object
-              canvasId: roomId,
+              roomId,
             })
           );
         }
