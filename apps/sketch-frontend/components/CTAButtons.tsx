@@ -30,20 +30,6 @@ const CTAButtons = () => {
     }
   };
 
-  // Don't render until mounted to prevent hydration issues
-  // if (!isMounted) {
-  //   return (
-  //     <div className="flex flex-col sm:flex-row gap-4">
-  //       <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white font-semibold px-8 py-4 rounded-2xl shadow-lg flex items-center justify-center gap-2 animate-pulse">
-  //         <div className="w-24 h-6 bg-purple-400 rounded"></div>
-  //       </div>
-  //       <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white font-semibold px-8 py-4 rounded-2xl shadow-lg flex items-center justify-center gap-2 animate-pulse">
-  //         <div className="w-20 h-6 bg-purple-400 rounded"></div>
-  //       </div>
-  //     </div>
-  //   );
-  // }
-
   return (
     <div className="flex flex-col sm:flex-row gap-4">
       <button
