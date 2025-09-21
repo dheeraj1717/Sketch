@@ -37,6 +37,7 @@ wss.on("connection", (ws, request) => {
     ws,
   });
   ws.on("message", async (message) => {
+    console.log("onnn")
     const parsedData = JSON.parse(message as unknown as string);
     const roomId = parsedData.roomId;
     // check if the room exists
@@ -65,6 +66,7 @@ wss.on("connection", (ws, request) => {
     }
 
     if (parsedData.type === "chat") {
+      console.log("chattt")
       const user = users.find((user) => user.userId === userId);
       if (!user) {
         return;

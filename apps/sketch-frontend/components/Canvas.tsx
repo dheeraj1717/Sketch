@@ -1,13 +1,16 @@
-import { initDraw } from "@/draw";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { Draw } from "@/draw/draw";
+import { useEffect, useRef, useState } from "react";
 
 export default function Canvas({
   roomId,
   socket,
+  selectedTool = "rect"
 }: {
   roomId: string;
   socket: WebSocket;
+  selectedTool?: string;
 }) {
+  const [drawInstance, setDrawInstance] = useState<Draw | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [transform, setTransform] = useState({
     x: 0,
@@ -15,35 +18,34 @@ export default function Canvas({
     scale: 1
   });
   const transformRef = useRef(transform);
-  const cleanupRef = useRef<(() => void) | null>(null);
-  const redrawFunctionRef = useRef<(() => void) | null>(null);
 
   // Update transform ref whenever transform changes
   useEffect(() => {
     transformRef.current = transform;
     // Trigger redraw when transform changes
-    if (redrawFunctionRef.current) {
-      redrawFunctionRef.current();
+    if (drawInstance) {
+      drawInstance.onTransformChange();
     }
-  }, [transform]);
+  }, [transform, drawInstance]);
 
-  // Initialize drawing functionality
+  // Initialize Draw class
   useEffect(() => {
     if (canvasRef.current && socket) {
-      const cleanup = async () => {
-        const drawCleanup = await initDraw(canvasRef.current!, roomId, socket, transformRef, redrawFunctionRef);
-        cleanupRef.current = drawCleanup || null;
+      const drawClassInstance = new Draw(canvasRef.current, roomId, socket, transformRef);
+      setDrawInstance(drawClassInstance);
+
+      return () => {
+        drawClassInstance.destroy();
       };
-      cleanup();
     }
-    
-    return () => {
-      if (cleanupRef.current) {
-        cleanupRef.current();
-        cleanupRef.current = null;
-      }
-    };
-  }, [roomId, socket]); // Remove transform from dependencies
+  }, [roomId, socket]);
+
+  // Update tool when selectedTool changes
+  useEffect(() => {
+    if (drawInstance) {
+      drawInstance.setTool(selectedTool);
+    }
+  }, [selectedTool, drawInstance]);
 
   // Handle canvas resizing
   useEffect(() => {
@@ -51,6 +53,10 @@ export default function Canvas({
       if (canvasRef.current) {
         canvasRef.current.width = window.innerWidth;
         canvasRef.current.height = window.innerHeight;
+        // Redraw after resize
+        if (drawInstance) {
+          drawInstance.onTransformChange();
+        }
       }
     };
     
@@ -60,7 +66,7 @@ export default function Canvas({
     return () => {
       window.removeEventListener("resize", handleResize);
     };
-  }, []);
+  }, [drawInstance]);
 
   // Handle infinite canvas interactions (pan and zoom)
   useEffect(() => {
@@ -80,7 +86,7 @@ export default function Canvas({
         canvas.style.cursor = 'grabbing';
         e.preventDefault();
       }
-      // Space + Left mouse for panning
+      // Shift + Left mouse for panning
       else if (e.button === 0 && e.shiftKey) {
         isDragging = true;
         lastX = e.clientX;
@@ -321,6 +327,7 @@ export default function Canvas({
       <div className="absolute top-4 left-4 bg-black/50 text-white p-2 rounded text-sm">
         <div>Zoom: {(transform.scale * 100).toFixed(0)}%</div>
         <div>Pan: ({transform.x.toFixed(0)}, {transform.y.toFixed(0)})</div>
+        <div>Tool: {selectedTool}</div>
         <div className="mt-2 text-xs">
           <div>• Shift+Drag or Middle Mouse: Pan</div>
           <div>• Ctrl+Scroll: Zoom</div>
