@@ -72,6 +72,7 @@ wss.on("connection", (ws, request) => {
         return;
       }
       const shapeData = parsedData.shape;
+      console.log(shapeData);
 
       // Create shape with all required fields according to new schema
       const newShape = await client.shapes.create({

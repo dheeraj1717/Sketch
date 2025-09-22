@@ -22,6 +22,15 @@ export async function getExistingShapes(roomId: string) {
           centerY: shape.y || 0,
           radius: shape.radius || 0,
         };
+      } else if (shape.type === "text") {
+        return {
+          type: "text" as const,
+          x: shape.x,
+          y: shape.y,
+          text: shape.text,
+          fontSize: shape.fontSize,
+          color: "#ffffff",
+        };
       }
       // Default fallback for unknown shape types
       return {
