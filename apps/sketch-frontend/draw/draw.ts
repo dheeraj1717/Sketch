@@ -11,8 +11,8 @@ type Shapes =
     }
   | {
       type: "circle";
-      centerX: number;
-      centerY: number;
+      x: number;
+      y: number;
       radius: number;
     }
   | {
@@ -27,7 +27,7 @@ type Shapes =
       type: "line";
       x: number;
       y: number;
-      points: [number, number, number, number];
+      points: [number, number, number, number]; // [x1, y1, x2, y2]
     };
 
 export class Draw {
@@ -50,6 +50,7 @@ export class Draw {
   private lastClickTime: number = 0;
   private clickPosition: { x: number; y: number } = { x: 0, y: 0 };
   private onTextInputCreate?: (input: HTMLInputElement) => void;
+  private hoveredShapeIndex: number = -1;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -189,7 +190,7 @@ export class Draw {
       fontSize: 16 / transform.scale, // Adjust font size based on zoom
       color: "#ffffff",
     };
-
+ 
     this.existingShapes.push(newShape);
 
     // Send to server
@@ -236,39 +237,66 @@ export class Draw {
     this.ctx.scale(transform.scale, transform.scale);
 
     // Draw all existing shapes
-    this.existingShapes.forEach((shape) => {
-      this.drawShape(shape);
+    this.existingShapes.forEach((shape, index) => {
+      const isHovered = this.currentTool === "eraser" && index === this.hoveredShapeIndex;
+      this.drawShape(shape, isHovered);
     });
 
     this.ctx.restore();
   }
 
-  drawShape(shape: Shapes) {
+  drawShape(shape: Shapes, isHovered: boolean = false) {
     if (!this.ctx) return;
 
     const transform = this.transformRef.current;
 
     this.ctx.save();
 
+    // Apply hover effect for eraser
+    const strokeStyle = isHovered ? "rgba(255, 100, 100, 0.8)" : "rgba(255, 255, 255, 0.8)";
+    const fillStyle = isHovered ? "rgba(255, 100, 100, 0.3)" : "transparent";
+
     if (shape.type === "rect") {
-      this.ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+      this.ctx.strokeStyle = strokeStyle;
+      this.ctx.fillStyle = fillStyle;
       this.ctx.lineWidth = 2 / transform.scale;
+      
+      if (isHovered) {
+        this.ctx.fillRect(shape.x, shape.y, shape.width, shape.height);
+      }
       this.ctx.strokeRect(shape.x, shape.y, shape.width, shape.height);
     } else if (shape.type === "circle") {
-      this.ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+      this.ctx.strokeStyle = strokeStyle;
+      this.ctx.fillStyle = fillStyle;
       this.ctx.lineWidth = 2 / transform.scale;
       this.ctx.beginPath();
-      this.ctx.arc(shape.centerX, shape.centerY, shape.radius, 0, 2 * Math.PI);
+      this.ctx.arc(shape.x, shape.y, shape.radius, 0, 2 * Math.PI);
+      
+      if (isHovered) {
+        this.ctx.fill();
+      }
       this.ctx.stroke();
     } else if (shape.type === "text") {
-      this.ctx.fillStyle = shape.color || "#ffffff";
+      this.ctx.fillStyle = isHovered ? "rgba(255, 100, 100, 0.8)" : (shape.color || "#ffffff");
       this.ctx.font = `${shape.fontSize}px Arial`;
       this.ctx.textAlign = "left";
       this.ctx.textBaseline = "top";
+      
+      if (isHovered) {
+        // Add background highlight for text
+        const textMetrics = this.ctx.measureText(shape.text);
+        const textHeight = shape.fontSize;
+        this.ctx.save();
+        this.ctx.fillStyle = "rgba(255, 100, 100, 0.3)";
+        this.ctx.fillRect(shape.x - 2, shape.y - 2, textMetrics.width + 4, textHeight + 4);
+        this.ctx.restore();
+        this.ctx.fillStyle = "rgba(255, 100, 100, 0.8)";
+      }
+      
       this.ctx.fillText(shape.text, shape.x, shape.y);
     } else if (shape.type === "line") {
-      this.ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
-      this.ctx.lineWidth = 2 / transform.scale;
+      this.ctx.strokeStyle = strokeStyle;
+      this.ctx.lineWidth = isHovered ? 4 / transform.scale : 2 / transform.scale;
       this.ctx.beginPath();
       this.ctx.moveTo(shape.points[0], shape.points[1]);
       this.ctx.lineTo(shape.points[2], shape.points[3]);
@@ -313,6 +341,30 @@ export class Draw {
       }
     }
 
+    // Handle eraser tool
+    if (this.currentTool === "eraser") {
+      const coords = this.getCanvasCoordinates(e);
+      const shapeIndex = this.findShapeAtPoint(coords.x, coords.y);
+      
+      if (shapeIndex !== -1) {
+        const shapeToDelete = this.existingShapes[shapeIndex];
+        this.existingShapes.splice(shapeIndex, 1);
+        console.log("Deleted shape:", shapeToDelete);
+        
+        // Send delete message to server
+        this.socket.send(
+          JSON.stringify({
+            type: "deleteShape",
+            shapeId: (shapeToDelete as any).id, // Assuming shapes have IDs from database
+            roomId: this.roomId,
+          })
+        );
+        
+        this.redrawCanvas();
+      }
+      return;
+    }
+
     // Only handle left mouse button and not when panning
     if (e.button !== 0 || e.shiftKey) return;
 
@@ -353,6 +405,7 @@ export class Draw {
       Math.abs(height) > 5 / transform.scale
     ) {
       let newShape: Shapes;
+
       if (this.currentTool === "rect") {
         newShape = {
           type: "rect" as const,
@@ -365,8 +418,8 @@ export class Draw {
         const radius = Math.sqrt(width * width + height * height) / 2;
         newShape = {
           type: "circle" as const,
-          centerX: this.startX + width / 2,
-          centerY: this.startY + height / 2,
+          x: this.startX + width / 2,
+          y: this.startY + height / 2,
           radius: radius,
         };
       } else if (this.currentTool === "line") {
@@ -401,9 +454,26 @@ export class Draw {
   };
 
   mouseMoveHandler = (e: MouseEvent) => {
+    const coords = this.getCanvasCoordinates(e);
+
+    // Handle eraser hover effect
+    if (this.currentTool === "eraser") {
+      const newHoveredIndex = this.findShapeAtPoint(coords.x, coords.y);
+      if (newHoveredIndex !== this.hoveredShapeIndex) {
+        this.hoveredShapeIndex = newHoveredIndex;
+        this.redrawCanvas();
+      }
+      // Change cursor to indicate eraser mode
+      this.canvas.style.cursor = newHoveredIndex !== -1 ? "pointer" : "crosshair";
+      return;
+    } else {
+      // Reset cursor for other tools
+      this.canvas.style.cursor = "crosshair";
+      this.hoveredShapeIndex = -1;
+    }
+
     if (!this.clicked || !this.ctx) return;
 
-    const coords = this.getCanvasCoordinates(e);
     const width = coords.x - this.startX;
     const height = coords.y - this.startY;
 
@@ -480,5 +550,56 @@ export class Draw {
     this.canvas.addEventListener("mouseup", this.mouseUpHandler);
     this.canvas.addEventListener("dblclick", this.doubleClickHandler);
     this.canvas.addEventListener("contextmenu", this.preventContextMenu);
+  }
+
+  // Helper function to find shape at a given point
+  findShapeAtPoint(x: number, y: number): number {
+    // Check shapes in reverse order (top to bottom)
+    for (let i = this.existingShapes.length - 1; i >= 0; i--) {
+      const shape = this.existingShapes[i];
+      
+      if (shape.type === "rect") {
+        if (x >= shape.x && x <= shape.x + shape.width &&
+            y >= shape.y && y <= shape.y + shape.height) {
+          return i;
+        }
+      } else if (shape.type === "circle") {
+        const dx = x - shape.x;
+        const dy = y - shape.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance <= shape.radius) {
+          return i;
+        }
+      } else if (shape.type === "text") {
+        // Approximate text bounds (this could be improved with actual text measurement)
+        const textWidth = shape.text.length * (shape.fontSize * 0.6);
+        const textHeight = shape.fontSize;
+        if (x >= shape.x && x <= shape.x + textWidth &&
+            y >= shape.y && y <= shape.y + textHeight) {
+          return i;
+        }
+      } else if (shape.type === "line") {
+        // Check if point is near the line (within a tolerance)
+        const tolerance = 5;
+        const [x1, y1, x2, y2] = shape.points;
+        const distance = this.distanceFromPointToLine(x, y, x1, y1, x2, y2);
+        if (distance <= tolerance) {
+          return i;
+        }
+      }
+    }
+    return -1;
+  }
+
+  // Helper function to calculate distance from point to line
+  distanceFromPointToLine(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
+    const lineLength = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+    if (lineLength === 0) return Math.sqrt((px - x1) ** 2 + (py - y1) ** 2);
+    
+    const t = Math.max(0, Math.min(1, ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / (lineLength ** 2)));
+    const projectionX = x1 + t * (x2 - x1);
+    const projectionY = y1 + t * (y2 - y1);
+    
+    return Math.sqrt((px - projectionX) ** 2 + (py - projectionY) ** 2);
   }
 }

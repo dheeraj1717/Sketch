@@ -62,7 +62,7 @@ roomRouter.get("/canvas/:roomId", async (req: AuthenticatedRequest, res) => {
     where: {
       roomId: roomId,
     },
-    take: 50,
+    take:1000,
   });
   res.status(200).json({ 
     shapes: shapes,

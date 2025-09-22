@@ -1,4 +1,12 @@
-import { Circle, Hand, Icon, Pencil, RectangleEllipsis, Square } from "lucide-react";
+import {
+  Circle,
+  Eraser,
+  Hand,
+  Icon,
+  Pencil,
+  RectangleEllipsis,
+  Square,
+} from "lucide-react";
 
 const Header = ({
   handleSetTool,
@@ -12,17 +20,21 @@ const Header = ({
       type: "rect",
       icon: Square,
     },
-     {
+    {
       type: "circle",
       icon: Circle,
     },
-     {
+    {
       type: "hand",
       icon: Hand,
     },
-     {
+    {
       type: "line",
       icon: Pencil,
+    },
+    {
+      type: "eraser",
+      icon: Eraser,
     },
   ];
 
@@ -30,7 +42,13 @@ const Header = ({
     <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-10 text-black bg-white p-4 flex gap-3 rounded-lg shadow-lg">
       {shapes.map((s, i) => {
         const Icon = s.icon;
-        return <Icon className="cursor-pointer font-light" key={i} onClick={() => handleSetTool(s.type)}/>;
+        return (
+          <Icon
+            className="cursor-pointer font-light"
+            key={i}
+            onClick={() => handleSetTool(s.type)}
+          />
+        );
       })}
     </div>
   );

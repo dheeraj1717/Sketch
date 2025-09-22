@@ -40,6 +40,7 @@ wss.on("connection", (ws, request) => {
     console.log("onnn");
     const parsedData = JSON.parse(message as unknown as string);
     const roomId = parsedData.roomId;
+    console.log(parsedData.type);
     // check if the room exists
     const room = await client.room.findFirst({
       where: {
@@ -112,6 +113,62 @@ wss.on("connection", (ws, request) => {
           );
         }
       });
+    }
+    if (parsedData.type === "deleteShape") {
+      console.log("Deleting shape");
+      const user = users.find((user) => user.userId === userId);
+      if (!user) {
+        return;
+      }
+
+      const shapeId = parsedData.shapeId;
+
+      try {
+        // Verify the shape exists and belongs to the room
+        const existingShape = await client.shapes.findFirst({
+          where: {
+            id: shapeId,
+            roomId: roomId,
+          },
+        });
+
+        if (!existingShape) {
+          console.log("Shape not found or doesn't belong to room:", shapeId);
+          return;
+        }
+
+        // Delete from database
+        await client.shapes.delete({
+          where: {
+            id: shapeId,
+          },
+        });
+
+        console.log("Shape deleted successfully:", shapeId);
+
+        // Broadcast deletion to all users in the room
+        users.forEach((user) => {
+          if (user.rooms.includes(roomId)) {
+            user.ws.send(
+              JSON.stringify({
+                type: "shapeDeleted",
+                shapeId: shapeId,
+                roomId,
+              })
+            );
+          }
+        });
+      } catch (error) {
+        console.error("Error deleting shape:", error);
+        // Send error back to the client
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            message: "Failed to delete shape",
+            roomId,
+          })
+        );
+      }
     }
   });
 
