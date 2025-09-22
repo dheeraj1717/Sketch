@@ -31,6 +31,13 @@ export async function getExistingShapes(roomId: string) {
           fontSize: shape.fontSize,
           color: "#ffffff",
         };
+      } else if (shape.type === "line"){
+        return{
+          type:"line" as const,
+          x:shape.x,
+          y:shape.y,
+          points:shape.points
+        }
       }
       // Default fallback for unknown shape types
       return {

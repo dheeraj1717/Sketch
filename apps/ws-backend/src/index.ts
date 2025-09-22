@@ -37,7 +37,7 @@ wss.on("connection", (ws, request) => {
     ws,
   });
   ws.on("message", async (message) => {
-    console.log("onnn")
+    console.log("onnn");
     const parsedData = JSON.parse(message as unknown as string);
     const roomId = parsedData.roomId;
     // check if the room exists
@@ -66,7 +66,7 @@ wss.on("connection", (ws, request) => {
     }
 
     if (parsedData.type === "chat") {
-      console.log("chattt")
+      console.log("chattt");
       const user = users.find((user) => user.userId === userId);
       if (!user) {
         return;
@@ -95,6 +95,11 @@ wss.on("connection", (ws, request) => {
           roomId: roomId, // Required foreign key
         },
       });
+
+      // Handle points for lines and other complex shapes
+      if (shapeData.points) {
+        newShape.points = shapeData.points; // This will be stored as JSON
+      }
 
       users.forEach((user) => {
         if (user.rooms.includes(roomId)) {

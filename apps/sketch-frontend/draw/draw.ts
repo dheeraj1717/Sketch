@@ -22,6 +22,12 @@ type Shapes =
       text: string;
       fontSize: number;
       color: string;
+    }
+  | {
+      type: "line";
+      x: number;
+      y: number;
+      points: [number, number, number, number];
     };
 
 export class Draw {
@@ -183,7 +189,7 @@ export class Draw {
       fontSize: 16 / transform.scale, // Adjust font size based on zoom
       color: "#ffffff",
     };
- 
+
     this.existingShapes.push(newShape);
 
     // Send to server
@@ -260,6 +266,13 @@ export class Draw {
       this.ctx.textAlign = "left";
       this.ctx.textBaseline = "top";
       this.ctx.fillText(shape.text, shape.x, shape.y);
+    } else if (shape.type === "line") {
+      this.ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+      this.ctx.lineWidth = 2 / transform.scale;
+      this.ctx.beginPath();
+      this.ctx.moveTo(shape.points[0], shape.points[1]);
+      this.ctx.lineTo(shape.points[2], shape.points[3]);
+      this.ctx.stroke();
     }
 
     this.ctx.restore();
@@ -340,7 +353,6 @@ export class Draw {
       Math.abs(height) > 5 / transform.scale
     ) {
       let newShape: Shapes;
-
       if (this.currentTool === "rect") {
         newShape = {
           type: "rect" as const,
@@ -349,13 +361,29 @@ export class Draw {
           width: Math.abs(width),
           height: Math.abs(height),
         };
-      } else {
+      } else if (this.currentTool === "circle") {
         const radius = Math.sqrt(width * width + height * height) / 2;
         newShape = {
           type: "circle" as const,
           centerX: this.startX + width / 2,
           centerY: this.startY + height / 2,
           radius: radius,
+        };
+      } else if (this.currentTool === "line") {
+        newShape = {
+          type: "line" as const,
+          x: this.startX, // Use start point as reference
+          y: this.startY,
+          points: [this.startX, this.startY, coords.x, coords.y],
+        };
+      } else {
+        // Default to rect if unknown tool
+        newShape = {
+          type: "rect" as const,
+          x: Math.min(this.startX, coords.x),
+          y: Math.min(this.startY, coords.y),
+          width: Math.abs(width),
+          height: Math.abs(height),
         };
       }
 
@@ -409,6 +437,11 @@ export class Draw {
         0,
         2 * Math.PI
       );
+      this.ctx.stroke();
+    } else if (this.currentTool === "line") {
+      this.ctx.beginPath();
+      this.ctx.moveTo(this.startX, this.startY);
+      this.ctx.lineTo(coords.x, coords.y);
       this.ctx.stroke();
     }
 
