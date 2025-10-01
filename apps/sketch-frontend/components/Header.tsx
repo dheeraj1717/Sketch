@@ -3,19 +3,26 @@ import {
   Eraser,
   Hand,
   Icon,
+  MousePointer2,
   Pencil,
+  Pointer,
   RectangleEllipsis,
+  Slash,
   Square,
 } from "lucide-react";
 
 const Header = ({
-  handleSetTool,
+  handleSelectTool,
   selectedTool,
 }: {
-  handleSetTool: (tool: string) => void;
+  handleSelectTool: (tool: string) => void;
   selectedTool: string;
 }) => {
   const shapes = [
+    {
+      type: "move",
+      icon: MousePointer2,
+    },
     {
       type: "rect",
       icon: Square,
@@ -25,12 +32,8 @@ const Header = ({
       icon: Circle,
     },
     {
-      type: "hand",
-      icon: Hand,
-    },
-    {
       type: "line",
-      icon: Pencil,
+      icon: Slash,
     },
     {
       type: "eraser",
@@ -39,14 +42,14 @@ const Header = ({
   ];
 
   return (
-    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-10 text-black bg-white p-4 flex gap-3 rounded-lg shadow-lg">
+    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white p-4 flex gap-3 rounded-lg shadow-lg">
       {shapes.map((s, i) => {
         const Icon = s.icon;
         return (
           <Icon
-            className="cursor-pointer font-light"
+            className={`cursor-pointer font-light ${selectedTool === s.type ? "text-purple-600" : "text-black"}`}
             key={i}
-            onClick={() => handleSetTool(s.type)}
+            onClick={() => handleSelectTool(s.type)}
           />
         );
       })}

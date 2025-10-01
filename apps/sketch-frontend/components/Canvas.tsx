@@ -116,7 +116,7 @@ export default function Canvas({
     const handleMouseUp = (e: MouseEvent) => {
       if (isDragging) {
         isDragging = false;
-        canvas.style.cursor = 'crosshair';
+        canvas.style.cursor = 'default';
         e.preventDefault();
       }
     };
@@ -205,7 +205,7 @@ export default function Canvas({
 
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
-        canvas.style.cursor = 'crosshair';
+        canvas.style.cursor = 'default';
       }
     };
 

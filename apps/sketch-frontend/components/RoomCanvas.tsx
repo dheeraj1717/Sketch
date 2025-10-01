@@ -6,10 +6,18 @@ import Header from "./Header";
 
 export function RoomCanvas({ roomId }: { roomId: string }) {
   const [socket, setSocket] = useState<WebSocket | null>(null);
-  const [selectedTool, setSelectedTool] = useState<string>("rect");
+  const [selectedTool, setSelectedTool] = useState<string>("");
+
+  const handleSelectTool = (tool: string) => {
+    if(tool === selectedTool) {
+      setSelectedTool("");
+      return
+    }
+    setSelectedTool(tool);
+  }
 
   useEffect(() => {
-    const ws = new WebSocket(`${WS_BASE}?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIwYjkyZGZhZC04NmI0LTQ3ZjQtODQwZi03NzMxYWY4N2MxNGMiLCJpYXQiOjE3NTg0Njg0MTUsImV4cCI6MTc1ODU1NDgxNX0.BwCZRlSYrb84HCO56HewLfOBvUmXt-oqHzLQFjEV0Uw`);
+    const ws = new WebSocket(`${WS_BASE}?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIwYjkyZGZhZC04NmI0LTQ3ZjQtODQwZi03NzMxYWY4N2MxNGMiLCJpYXQiOjE3NTkyOTc0MjUsImV4cCI6MTc1OTM4MzgyNX0.Ou6DHIu6Nw1v2WM0KQE5aM65LCCzcsTzco5GGFkgBxI`);
     ws.onopen = () => {
       setSocket(ws);
       ws.send(JSON.stringify({ type: "joinRoom", roomId }));
@@ -20,7 +28,7 @@ export function RoomCanvas({ roomId }: { roomId: string }) {
   
   return (
     <div>
-      <Header handleSetTool={setSelectedTool} selectedTool={selectedTool} />
+      <Header handleSelectTool={handleSelectTool} selectedTool={selectedTool} />
       <Canvas roomId={roomId} socket={socket} selectedTool={selectedTool} />
     </div>
   );

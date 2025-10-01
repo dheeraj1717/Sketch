@@ -27,7 +27,7 @@ type Shapes =
       type: "line";
       x: number;
       y: number;
-      points: [number, number, number, number]; // [x1, y1, x2, y2]
+      points: [number, number, number, number];
     };
 
 export class Draw {
@@ -51,6 +51,9 @@ export class Draw {
   private clickPosition: { x: number; y: number } = { x: 0, y: 0 };
   private onTextInputCreate?: (input: HTMLInputElement) => void;
   private hoveredShapeIndex: number = -1;
+  private selectedShapeIndex: number = -1;
+  private isDraggingShape: boolean = false;
+  private dragOffset: { x: number; y: number } = { x: 0, y: 0 };
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -101,25 +104,21 @@ export class Draw {
   }
 
   createTextInput(x: number, y: number) {
-    // Remove existing text input if any
     this.removeTextInput();
 
-    // Convert world coordinates to screen coordinates for input positioning
     const transform = this.transformRef.current;
     const screenX = x * transform.scale + transform.x;
     const screenY = y * transform.scale + transform.y;
 
-    // Create input element
     const input = document.createElement("input");
     input.type = "text";
     input.placeholder = "Type text...";
 
-    // Style the input
     input.style.position = "absolute";
     input.style.left = `${screenX}px`;
     input.style.top = `${screenY}px`;
     input.style.fontSize = `${16 * transform.scale}px`;
-    input.style.fontFamily = "Virgil, Segoe UI Emoji, serif"; // Excalidraw font
+    input.style.fontFamily = "Virgil, Segoe UI Emoji, serif";
     input.style.lineHeight = "1.2";
     input.style.border = "none";
     input.style.outline = "none";
@@ -136,27 +135,23 @@ export class Draw {
     input.style.textAlign = "left";
     input.style.verticalAlign = "top";
 
-    // Add to DOM
     document.body.appendChild(input);
     this.textInput = input;
     this.isEditingText = true;
 
-    // Focus and select text
     input.focus();
     input.select();
 
-    // Handle input events
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         this.finishTextInput(x, y);
       } else if (e.key === "Escape") {
         this.cancelTextInput();
       }
-      e.stopPropagation(); // Prevent canvas shortcuts
+      e.stopPropagation();
     });
 
     input.addEventListener("blur", () => {
-      // Small delay to allow for other events to process
       setTimeout(() => {
         if (this.textInput && this.textInput.value.trim()) {
           this.finishTextInput(x, y);
@@ -166,7 +161,6 @@ export class Draw {
       }, 100);
     });
 
-    // Notify parent component if callback provided
     if (this.onTextInputCreate) {
       this.onTextInputCreate(input);
     }
@@ -181,19 +175,17 @@ export class Draw {
     const text = this.textInput.value.trim();
     const transform = this.transformRef.current;
 
-    // Create text shape
     const newShape: Shapes = {
       type: "text",
       x: x,
       y: y,
       text: text,
-      fontSize: 16 / transform.scale, // Adjust font size based on zoom
+      fontSize: 16 / transform.scale,
       color: "#ffffff",
     };
- 
+
     this.existingShapes.push(newShape);
 
-    // Send to server
     this.socket.send(
       JSON.stringify({
         type: "chat",
@@ -223,87 +215,202 @@ export class Draw {
 
     const transform = this.transformRef.current;
 
-    // Clear the entire canvas
     this.ctx.save();
     this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Fill background
     this.ctx.fillStyle = "rgba(30, 30, 30, 1)";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Apply transformations
     this.ctx.translate(transform.x, transform.y);
     this.ctx.scale(transform.scale, transform.scale);
 
-    // Draw all existing shapes
     this.existingShapes.forEach((shape, index) => {
-      const isHovered = this.currentTool === "eraser" && index === this.hoveredShapeIndex;
-      this.drawShape(shape, isHovered);
+      const isHovered =
+        this.currentTool === "eraser" && index === this.hoveredShapeIndex;
+      const isSelected =
+        this.currentTool === "move" && index === this.selectedShapeIndex;
+      this.drawShape(shape, isHovered, isSelected);
     });
 
     this.ctx.restore();
   }
 
-  drawShape(shape: Shapes, isHovered: boolean = false) {
+  drawShape(
+    shape: Shapes,
+    isHovered: boolean = false,
+    isSelected: boolean = false
+  ) {
     if (!this.ctx) return;
 
     const transform = this.transformRef.current;
 
     this.ctx.save();
 
-    // Apply hover effect for eraser
-    const strokeStyle = isHovered ? "rgba(255, 100, 100, 0.8)" : "rgba(255, 255, 255, 0.8)";
+    const strokeStyle = isHovered
+      ? "rgba(255, 100, 100, 0.8)"
+      : isSelected
+        ? "rgba(66, 133, 244, 0.9)"
+        : "rgba(255, 255, 255, 0.8)";
     const fillStyle = isHovered ? "rgba(255, 100, 100, 0.3)" : "transparent";
+    const lineWidth = isSelected ? 3 / transform.scale : 2 / transform.scale;
 
     if (shape.type === "rect") {
       this.ctx.strokeStyle = strokeStyle;
       this.ctx.fillStyle = fillStyle;
-      this.ctx.lineWidth = 2 / transform.scale;
-      
+      this.ctx.lineWidth = lineWidth;
+
       if (isHovered) {
         this.ctx.fillRect(shape.x, shape.y, shape.width, shape.height);
       }
       this.ctx.strokeRect(shape.x, shape.y, shape.width, shape.height);
+
+      if (isSelected) {
+        this.drawSelectionBox(shape.x, shape.y, shape.width, shape.height);
+      }
     } else if (shape.type === "circle") {
       this.ctx.strokeStyle = strokeStyle;
       this.ctx.fillStyle = fillStyle;
-      this.ctx.lineWidth = 2 / transform.scale;
+      this.ctx.lineWidth = lineWidth;
       this.ctx.beginPath();
       this.ctx.arc(shape.x, shape.y, shape.radius, 0, 2 * Math.PI);
-      
+
       if (isHovered) {
         this.ctx.fill();
       }
       this.ctx.stroke();
+
+      if (isSelected) {
+        const boxSize = shape.radius * 2;
+        this.drawSelectionBox(
+          shape.x - shape.radius,
+          shape.y - shape.radius,
+          boxSize,
+          boxSize
+        );
+      }
     } else if (shape.type === "text") {
-      this.ctx.fillStyle = isHovered ? "rgba(255, 100, 100, 0.8)" : (shape.color || "#ffffff");
+      this.ctx.fillStyle = isHovered
+        ? "rgba(255, 100, 100, 0.8)"
+        : shape.color || "#ffffff";
       this.ctx.font = `${shape.fontSize}px Arial`;
       this.ctx.textAlign = "left";
       this.ctx.textBaseline = "top";
-      
-      if (isHovered) {
-        // Add background highlight for text
-        const textMetrics = this.ctx.measureText(shape.text);
-        const textHeight = shape.fontSize;
+
+      const textMetrics = this.ctx.measureText(shape.text);
+      const textHeight = shape.fontSize;
+
+      if (isHovered || isSelected) {
         this.ctx.save();
-        this.ctx.fillStyle = "rgba(255, 100, 100, 0.3)";
-        this.ctx.fillRect(shape.x - 2, shape.y - 2, textMetrics.width + 4, textHeight + 4);
+        this.ctx.fillStyle = isSelected
+          ? "rgba(66, 133, 244, 0.2)"
+          : "rgba(255, 100, 100, 0.3)";
+        this.ctx.fillRect(
+          shape.x - 2,
+          shape.y - 2,
+          textMetrics.width + 4,
+          textHeight + 4
+        );
         this.ctx.restore();
-        this.ctx.fillStyle = "rgba(255, 100, 100, 0.8)";
+
+        if (isHovered) {
+          this.ctx.fillStyle = "rgba(255, 100, 100, 0.8)";
+        }
       }
-      
+
       this.ctx.fillText(shape.text, shape.x, shape.y);
+
+      if (isSelected) {
+        this.drawSelectionBox(
+          shape.x - 2,
+          shape.y - 2,
+          textMetrics.width + 4,
+          textHeight + 4
+        );
+      }
     } else if (shape.type === "line") {
       this.ctx.strokeStyle = strokeStyle;
-      this.ctx.lineWidth = isHovered ? 4 / transform.scale : 2 / transform.scale;
+      this.ctx.lineWidth = isHovered ? 4 / transform.scale : lineWidth;
       this.ctx.beginPath();
       this.ctx.moveTo(shape.points[0], shape.points[1]);
       this.ctx.lineTo(shape.points[2], shape.points[3]);
       this.ctx.stroke();
+
+      if (isSelected) {
+        const minX = Math.min(shape.points[0], shape.points[2]);
+        const minY = Math.min(shape.points[1], shape.points[3]);
+        const maxX = Math.max(shape.points[0], shape.points[2]);
+        const maxY = Math.max(shape.points[1], shape.points[3]);
+        this.drawSelectionBox(minX, minY, maxX - minX, maxY - minY);
+      }
     }
 
     this.ctx.restore();
+  }
+
+  drawSelectionBox(x: number, y: number, width: number, height: number) {
+    if (!this.ctx) return;
+
+    const transform = this.transformRef.current;
+    const padding = 5 / transform.scale;
+
+    this.ctx.save();
+    this.ctx.strokeStyle = "rgba(66, 133, 244, 0.9)";
+    this.ctx.lineWidth = 2 / transform.scale;
+    this.ctx.setLineDash([5 / transform.scale, 5 / transform.scale]);
+    this.ctx.strokeRect(
+      x - padding,
+      y - padding,
+      width + padding * 2,
+      height + padding * 2
+    );
+
+    // Draw corner handles
+    const handleSize = 8 / transform.scale;
+    this.ctx.fillStyle = "#ffffff";
+    this.ctx.strokeStyle = "rgba(66, 133, 244, 0.9)";
+    this.ctx.setLineDash([]);
+
+    const corners = [
+      [x - padding, y - padding],
+      [x + width + padding, y - padding],
+      [x - padding, y + height + padding],
+      [x + width + padding, y + height + padding],
+    ];
+
+    corners.forEach(([cx, cy]) => {
+      this.ctx.fillRect(
+        cx - handleSize / 2,
+        cy - handleSize / 2,
+        handleSize,
+        handleSize
+      );
+      this.ctx.strokeRect(
+        cx - handleSize / 2,
+        cy - handleSize / 2,
+        handleSize,
+        handleSize
+      );
+    });
+
+    this.ctx.restore();
+  }
+
+  moveShape(shape: Shapes, deltaX: number, deltaY: number) {
+    if (shape.type === "rect" || shape.type === "text") {
+      shape.x += deltaX;
+      shape.y += deltaY;
+    } else if (shape.type === "circle") {
+      shape.x += deltaX;
+      shape.y += deltaY;
+    } else if (shape.type === "line") {
+      shape.points[0] += deltaX;
+      shape.points[1] += deltaY;
+      shape.points[2] += deltaX;
+      shape.points[3] += deltaY;
+      shape.x += deltaX;
+      shape.y += deltaY;
+    }
   }
 
   screenToWorld(screenX: number, screenY: number) {
@@ -332,7 +439,6 @@ export class Draw {
   };
 
   mouseDownHandler = (e: MouseEvent) => {
-    // Cancel text input if clicking elsewhere
     if (this.isEditingText && this.textInput) {
       if (this.textInput.value.trim()) {
         this.finishTextInput(this.clickPosition.x, this.clickPosition.y);
@@ -341,25 +447,61 @@ export class Draw {
       }
     }
 
+    const coords = this.getCanvasCoordinates(e);
+
     // Handle eraser tool
     if (this.currentTool === "eraser") {
-      const coords = this.getCanvasCoordinates(e);
       const shapeIndex = this.findShapeAtPoint(coords.x, coords.y);
-      
+
       if (shapeIndex !== -1) {
         const shapeToDelete = this.existingShapes[shapeIndex];
         this.existingShapes.splice(shapeIndex, 1);
-        console.log("Deleted shape:", shapeToDelete);
-        
-        // Send delete message to server
+
         this.socket.send(
           JSON.stringify({
             type: "deleteShape",
-            shapeId: (shapeToDelete as any).id, // Assuming shapes have IDs from database
+            shapeId: (shapeToDelete as any).id,
             roomId: this.roomId,
           })
         );
-        
+
+        this.redrawCanvas();
+      }
+      return;
+    }
+
+    // Handle move tool
+    if (this.currentTool === "move") {
+      const shapeIndex = this.findShapeAtPoint(coords.x, coords.y);
+
+      if (shapeIndex !== -1) {
+        this.selectedShapeIndex = shapeIndex;
+        this.isDraggingShape = true;
+
+        const shape = this.existingShapes[shapeIndex];
+
+        // Calculate offset from shape position to click position
+        if (shape.type === "rect" || shape.type === "text") {
+          this.dragOffset = {
+            x: coords.x - shape.x,
+            y: coords.y - shape.y,
+          };
+        } else if (shape.type === "circle") {
+          this.dragOffset = {
+            x: coords.x - shape.x,
+            y: coords.y - shape.y,
+          };
+        } else if (shape.type === "line") {
+          this.dragOffset = {
+            x: coords.x - shape.x,
+            y: coords.y - shape.y,
+          };
+        }
+
+        this.canvas.style.cursor = "move";
+        this.redrawCanvas();
+      } else {
+        this.selectedShapeIndex = -1;
         this.redrawCanvas();
       }
       return;
@@ -368,16 +510,13 @@ export class Draw {
     // Only handle left mouse button and not when panning
     if (e.button !== 0 || e.shiftKey) return;
 
-    // Track click timing and position for double-click detection
     const now = Date.now();
-    const coords = this.getCanvasCoordinates(e);
 
     if (
       now - this.lastClickTime < 500 &&
       Math.abs(coords.x - this.clickPosition.x) < 10 &&
       Math.abs(coords.y - this.clickPosition.y) < 10
     ) {
-      // This is handled by doubleClickHandler
       return;
     }
 
@@ -390,6 +529,28 @@ export class Draw {
   };
 
   mouseUpHandler = (e: MouseEvent) => {
+    // Handle move tool release
+    if (
+      this.currentTool === "move" &&
+      this.isDraggingShape &&
+      this.selectedShapeIndex !== -1
+    ) {
+      const movedShape = this.existingShapes[this.selectedShapeIndex];
+
+      // Send update to server
+      this.socket.send(
+        JSON.stringify({
+          type: "shapeUpdate",
+          shape: movedShape,
+          roomId: this.roomId,
+        })
+      );
+
+      this.isDraggingShape = false;
+      this.canvas.style.cursor = "default";
+      return;
+    }
+
     if (!this.clicked || e.button !== 0) return;
     this.clicked = false;
 
@@ -399,12 +560,11 @@ export class Draw {
 
     const transform = this.transformRef.current;
 
-    // Only create shape if it has meaningful size
     if (
       Math.abs(width) > 5 / transform.scale ||
       Math.abs(height) > 5 / transform.scale
     ) {
-      let newShape: Shapes;
+      let newShape: Shapes | null = null;
 
       if (this.currentTool === "rect") {
         newShape = {
@@ -425,36 +585,61 @@ export class Draw {
       } else if (this.currentTool === "line") {
         newShape = {
           type: "line" as const,
-          x: this.startX, // Use start point as reference
+          x: this.startX,
           y: this.startY,
           points: [this.startX, this.startY, coords.x, coords.y],
         };
-      } else {
-        // Default to rect if unknown tool
-        newShape = {
-          type: "rect" as const,
-          x: Math.min(this.startX, coords.x),
-          y: Math.min(this.startY, coords.y),
-          width: Math.abs(width),
-          height: Math.abs(height),
-        };
       }
 
-      this.existingShapes.push(newShape);
+      if (newShape) {
+        this.existingShapes.push(newShape);
 
-      this.socket.send(
-        JSON.stringify({
-          type: "chat",
-          shape: newShape,
-          roomId: this.roomId,
-        })
-      );
+        this.socket.send(
+          JSON.stringify({
+            type: "chat",
+            shape: newShape,
+            roomId: this.roomId,
+          })
+        );
+      }
     }
     this.redrawCanvas();
   };
 
   mouseMoveHandler = (e: MouseEvent) => {
     const coords = this.getCanvasCoordinates(e);
+
+    // Handle move tool dragging
+    if (
+      this.currentTool === "move" &&
+      this.isDraggingShape &&
+      this.selectedShapeIndex !== -1
+    ) {
+      const shape = this.existingShapes[this.selectedShapeIndex];
+
+      // Calculate new position accounting for drag offset
+      const newX = coords.x - this.dragOffset.x;
+      const newY = coords.y - this.dragOffset.y;
+
+      // Calculate delta from current position
+      let deltaX = 0;
+      let deltaY = 0;
+
+      if (shape.type === "rect" || shape.type === "text") {
+        deltaX = newX - shape.x;
+        deltaY = newY - shape.y;
+      } else if (shape.type === "circle") {
+        deltaX = newX - shape.x;
+        deltaY = newY - shape.y;
+      } else if (shape.type === "line") {
+        deltaX = newX - shape.x;
+        deltaY = newY - shape.y;
+      }
+
+      this.moveShape(shape, deltaX, deltaY);
+      this.redrawCanvas();
+      return;
+    }
 
     // Handle eraser hover effect
     if (this.currentTool === "eraser") {
@@ -463,11 +648,16 @@ export class Draw {
         this.hoveredShapeIndex = newHoveredIndex;
         this.redrawCanvas();
       }
-      // Change cursor to indicate eraser mode
-      this.canvas.style.cursor = newHoveredIndex !== -1 ? "pointer" : "crosshair";
+      this.canvas.style.cursor =
+        newHoveredIndex !== -1 ? "pointer" : "default";
       return;
+    }
+
+    // Handle move tool hover effect
+    if (this.currentTool === "move") {
+      const newHoveredIndex = this.findShapeAtPoint(coords.x, coords.y);
+      this.canvas.style.cursor = newHoveredIndex !== -1 ? "move" : "defaut";
     } else {
-      // Reset cursor for other tools
       this.canvas.style.cursor = "crosshair";
       this.hoveredShapeIndex = -1;
     }
@@ -479,10 +669,8 @@ export class Draw {
 
     const transform = this.transformRef.current;
 
-    // Clear and redraw everything
     this.redrawCanvas();
 
-    // Draw current shape being created
     this.ctx.save();
     this.ctx.translate(transform.x, transform.y);
     this.ctx.scale(transform.scale, transform.scale);
@@ -524,14 +712,16 @@ export class Draw {
 
   setTool(tool: string) {
     this.currentTool = tool;
-    // Cancel any active text input when switching tools
     if (this.isEditingText) {
       this.cancelTextInput();
     }
+    // Reset selection when switching tools
+    this.selectedShapeIndex = -1;
+    this.isDraggingShape = false;
+    this.redrawCanvas();
   }
 
   onTransformChange() {
-    // Update text input position if active
     if (this.textInput && this.isEditingText) {
       const transform = this.transformRef.current;
       const screenX = this.clickPosition.x * transform.scale + transform.x;
@@ -552,15 +742,17 @@ export class Draw {
     this.canvas.addEventListener("contextmenu", this.preventContextMenu);
   }
 
-  // Helper function to find shape at a given point
   findShapeAtPoint(x: number, y: number): number {
-    // Check shapes in reverse order (top to bottom)
     for (let i = this.existingShapes.length - 1; i >= 0; i--) {
       const shape = this.existingShapes[i];
-      
+
       if (shape.type === "rect") {
-        if (x >= shape.x && x <= shape.x + shape.width &&
-            y >= shape.y && y <= shape.y + shape.height) {
+        if (
+          x >= shape.x &&
+          x <= shape.x + shape.width &&
+          y >= shape.y &&
+          y <= shape.y + shape.height
+        ) {
           return i;
         }
       } else if (shape.type === "circle") {
@@ -571,15 +763,17 @@ export class Draw {
           return i;
         }
       } else if (shape.type === "text") {
-        // Approximate text bounds (this could be improved with actual text measurement)
         const textWidth = shape.text.length * (shape.fontSize * 0.6);
         const textHeight = shape.fontSize;
-        if (x >= shape.x && x <= shape.x + textWidth &&
-            y >= shape.y && y <= shape.y + textHeight) {
+        if (
+          x >= shape.x &&
+          x <= shape.x + textWidth &&
+          y >= shape.y &&
+          y <= shape.y + textHeight
+        ) {
           return i;
         }
       } else if (shape.type === "line") {
-        // Check if point is near the line (within a tolerance)
         const tolerance = 5;
         const [x1, y1, x2, y2] = shape.points;
         const distance = this.distanceFromPointToLine(x, y, x1, y1, x2, y2);
@@ -591,15 +785,27 @@ export class Draw {
     return -1;
   }
 
-  // Helper function to calculate distance from point to line
-  distanceFromPointToLine(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
+  distanceFromPointToLine(
+    px: number,
+    py: number,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number
+  ): number {
     const lineLength = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
     if (lineLength === 0) return Math.sqrt((px - x1) ** 2 + (py - y1) ** 2);
-    
-    const t = Math.max(0, Math.min(1, ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / (lineLength ** 2)));
+
+    const t = Math.max(
+      0,
+      Math.min(
+        1,
+        ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / lineLength ** 2
+      )
+    );
     const projectionX = x1 + t * (x2 - x1);
     const projectionY = y1 + t * (y2 - y1);
-    
+
     return Math.sqrt((px - projectionX) ** 2 + (py - projectionY) ** 2);
   }
 }
