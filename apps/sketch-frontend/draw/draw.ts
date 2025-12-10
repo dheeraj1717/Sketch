@@ -602,6 +602,9 @@ export class Draw {
           })
         );
       }
+    } else if (this.currentTool === "text") {
+      // Single click for text tool
+      this.createTextInput(coords.x, coords.y);
     }
     this.redrawCanvas();
   };

@@ -3,6 +3,7 @@ import { PencilLine, SquareArrowOutUpRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import AuthModal from "./AuthModal";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 const CTAButtons = () => {
   const [openAuth, setOpenAuth] = useState(false);
@@ -14,8 +15,15 @@ const CTAButtons = () => {
     setIsMounted(true);
   }, []);
 
+  const { isLoggedIn } = useAuth();
+
   const handleStartCreating = () => {
-    setOpenAuth(true);
+    if (isLoggedIn) {
+      const roomId = Math.random().toString(36).substring(2, 9);
+      router.push(`/canvas/${roomId}`);
+    } else {
+      setOpenAuth(true);
+    }
   };
 
   const handleShowAuthModal = () => {
@@ -46,7 +54,15 @@ const CTAButtons = () => {
         Guest Mode
         <SquareArrowOutUpRight className="w-4 h-4" />
       </button>
-      {openAuth && <AuthModal handleShowAuthModal={handleShowAuthModal} />}
+      {openAuth && (
+        <AuthModal 
+          handleShowAuthModal={handleShowAuthModal} 
+          onAuthSuccess={() => {
+            const roomId = Math.random().toString(36).substring(2, 9);
+            router.push(`/canvas/${roomId}`);
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -93,6 +93,7 @@ authRouter.post("/signup", async (req: Request, res: Response) => {
 
   return res.status(201).json({
     message: "User created successfully",
+    accessToken,
     user: {
       id: createdUser.id,
       name: createdUser.name,
@@ -151,7 +152,7 @@ authRouter.post("/signin", async (req: Request, res: Response) => {
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     })
-    .json({ message: "Signed In Successfully!" });
+    .json({ message: "Signed In Successfully!", accessToken });
 });
 
 authRouter.post("/refresh-token", async (req: Request, res: Response) => {
@@ -200,6 +201,7 @@ authRouter.post("/refresh-token", async (req: Request, res: Response) => {
     })
     .json({
       message: "tokens refreshed!",
+      accessToken,
     });
 });
 

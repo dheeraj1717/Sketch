@@ -3,6 +3,7 @@ import { WS_BASE } from "@/utils/urls";
 import { useEffect, useRef, useState } from "react";
 import Canvas from "./Canvas";
 import Header from "./Header";
+import { useAuth } from "@/context/AuthContext";
 
 export function RoomCanvas({ roomId }: { roomId: string }) {
   const [socket, setSocket] = useState<WebSocket | null>(null);
@@ -16,13 +17,23 @@ export function RoomCanvas({ roomId }: { roomId: string }) {
     setSelectedTool(tool);
   }
 
+  const { token } = useAuth();
+  
   useEffect(() => {
-    const ws = new WebSocket(`${WS_BASE}?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIwYjkyZGZhZC04NmI0LTQ3ZjQtODQwZi03NzMxYWY4N2MxNGMiLCJpYXQiOjE3NTkyOTc0MjUsImV4cCI6MTc1OTM4MzgyNX0.Ou6DHIu6Nw1v2WM0KQE5aM65LCCzcsTzco5GGFkgBxI`);
+    // If we have a token, we use it. If not, we send an empty string/undefined, which backend now handles as guest.
+    // We do NOT return early anymore, so guests can connect.
+    const tokenParam = token ? `?token=${token}` : "";
+    const ws = new WebSocket(`${WS_BASE}${tokenParam}`);
+    
     ws.onopen = () => {
       setSocket(ws);
       ws.send(JSON.stringify({ type: "joinRoom", roomId }));
     };
-  }, [roomId]);
+    
+    return () => {
+        ws.close();
+    }
+  }, [roomId, token]);
 
   if (!socket) return <div>Connecting to server...</div>;
   

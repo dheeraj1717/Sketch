@@ -26,10 +26,9 @@ wss.on("connection", (ws, request) => {
   if (!url) return;
   const queryParams = new URLSearchParams(url.split("?")[1]);
   const token = queryParams.get("token") || "";
-  const userId = verifyUser(token);
+  let userId = verifyUser(token);
   if (!userId) {
-    ws.close();
-    return;
+    userId = `guest-${Math.random().toString(36).substring(7)}`;
   }
   users.push({
     userId,

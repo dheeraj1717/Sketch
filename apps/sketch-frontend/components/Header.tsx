@@ -9,7 +9,10 @@ import {
   RectangleEllipsis,
   Slash,
   Square,
+  Type,
+  Share2
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 const Header = ({
   handleSelectTool,
@@ -18,6 +21,7 @@ const Header = ({
   handleSelectTool: (tool: string) => void;
   selectedTool: string;
 }) => {
+  const { isLoggedIn } = useAuth();
   const shapes = [
     {
       type: "move",
@@ -36,23 +40,48 @@ const Header = ({
       icon: Slash,
     },
     {
+      type: "text",
+      icon: Type,
+    },
+    {
       type: "eraser",
       icon: Eraser,
     },
   ];
 
   return (
-    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white p-4 flex gap-3 rounded-lg shadow-lg">
-      {shapes.map((s, i) => {
-        const Icon = s.icon;
-        return (
-          <Icon
-            className={`cursor-pointer font-light ${selectedTool === s.type ? "text-purple-600" : "text-black"}`}
-            key={i}
-            onClick={() => handleSelectTool(s.type)}
-          />
-        );
-      })}
+    <div className="fixed top-4 left-0 right-0 z-10 flex justify-center pointer-events-none">
+       {/* Toolbar - Pointer events auto to allow interaction */}
+      <div className="bg-white p-3 flex gap-3 rounded-lg shadow-lg pointer-events-auto items-center">
+        {shapes.map((s, i) => {
+          const Icon = s.icon;
+          return (
+            <Icon
+              className={`cursor-pointer w-5 h-5 transition-colors ${selectedTool === s.type ? "text-purple-600" : "text-gray-500 hover:text-black"}`}
+              key={i}
+              onClick={() => handleSelectTool(s.type)}
+            />
+          );
+        })}
+      
+      {/* Separator */}
+      <div className="w-px h-6 bg-gray-200 mx-2"></div>
+
+      {isLoggedIn ? (
+          <button 
+            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium px-3 py-1.5 rounded-md transition-colors"
+            onClick={() => {
+              navigator.clipboard.writeText(window.location.href);
+              alert("Link copied to clipboard!");
+            }}
+          >
+            <Share2 className="w-4 h-4" />
+            Share
+          </button>
+        ) : (
+          <div className="text-xs text-gray-400 px-2">Log in to share</div>
+        )}
+      </div>
     </div>
   );
 };

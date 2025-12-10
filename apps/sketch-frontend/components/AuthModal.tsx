@@ -2,6 +2,9 @@
 import { useForm } from "react-hook-form";
 import { useEffect, useState } from "react";
 import { X, User, Mail, Lock } from "lucide-react";
+import { API_BASE } from "@/utils/urls";
+import axios from "axios";
+import { useAuth } from "@/context/AuthContext";
 
 interface AuthDTO {
   name?: string;
@@ -9,9 +12,17 @@ interface AuthDTO {
   password: string;
 }
 
-const AuthModal = ({ handleShowAuthModal }: { handleShowAuthModal: () => void }) => {
+const AuthModal = ({ 
+  handleShowAuthModal,
+  onAuthSuccess 
+}: { 
+  handleShowAuthModal: () => void;
+  onAuthSuccess?: () => void;
+}) => {
   const [isMounted, setIsMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<"login" | "signup">("signup");
+  const { login } = useAuth();
+  const [errorString, setErrorString] = useState("");
 
   const {
     register,
@@ -29,6 +40,7 @@ const AuthModal = ({ handleShowAuthModal }: { handleShowAuthModal: () => void })
   // Reset form when switching tabs
   useEffect(() => {
     reset();
+    setErrorString("");
   }, [activeTab, reset]);
 
   // Prevent hydration mismatch by only rendering after mount
@@ -48,6 +60,52 @@ const AuthModal = ({ handleShowAuthModal }: { handleShowAuthModal: () => void })
 
   const handleTabSwitch = (tab: "login" | "signup") => {
     setActiveTab(tab);
+  };
+
+  const onSubmit = async (data: AuthDTO) => {
+    try {
+      setErrorString("");
+      const endpoint = activeTab === "signup" ? "/auth/signup" : "/auth/signin";
+      const payload = activeTab === "signup"
+        ? {
+            name: data.name,
+            username: data.email.split("@")[0], // Simple username generation
+            email: data.email,
+            password: data.password,
+          }
+        : {
+            email: data.email,
+            password: data.password,
+          };
+
+      const res = await axios.post(`${API_BASE}${endpoint}`, payload);
+
+      if (res.status === 201 || res.status === 200) {
+        const accessToken = res.data.accessToken;
+        let user: any = res.data.user;
+        
+        if (!user && activeTab === "login") {
+           user = {
+              email: data.email,
+              name: "User",
+              id: "unknown"
+           }
+        }
+
+        login(accessToken, user);
+        handleShowAuthModal();
+        if (onAuthSuccess) {
+          onAuthSuccess();
+        }
+      }
+    } catch (e: any) {
+      console.error(e);
+      if (e.response && e.response.data && e.response.data.message) {
+        setErrorString(e.response.data.message);
+      } else {
+        setErrorString("Something went wrong. Please try again.");
+      }
+    }
   };
 
   return (
@@ -76,7 +134,7 @@ const AuthModal = ({ handleShowAuthModal }: { handleShowAuthModal: () => void })
         </div>
 
         {/* Tab Switcher */}
-        {/* <div className="flex bg-gray-50 rounded-xl p-1 mb-8">
+        <div className="flex bg-gray-50 rounded-xl p-1 mb-6">
           <button
             onClick={() => handleTabSwitch("signup")}
             className={`flex-1 py-3 px-6 text-sm font-medium rounded-lg transition-all duration-200 ${
@@ -97,7 +155,13 @@ const AuthModal = ({ handleShowAuthModal }: { handleShowAuthModal: () => void })
           >
             Login
           </button>
-        </div> */}
+        </div>
+
+        {errorString && (
+            <div className="bg-red-50 text-red-500 text-sm p-3 rounded-lg mb-4 text-center">
+              {errorString}
+            </div>
+          )}
 
         <div className="space-y-4">
           {/* Name field - only show for signup */}
@@ -205,7 +269,7 @@ const AuthModal = ({ handleShowAuthModal }: { handleShowAuthModal: () => void })
           {/* Submit button */}
           <button
             type="button"
-            onClick={handleSubmit((data) => console.log(data))}
+            onClick={handleSubmit(onSubmit)}
             className="w-full bg-gradient-to-r from-purple-400 to-purple-700 text-white py-3 px-6 rounded-xl font-medium  focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transform hover:scale-[1.02] transition-all duration-200 shadow-lg cursor-pointer"
           >
             {activeTab === "signup" ? "Create Account" : "Sign In"}
