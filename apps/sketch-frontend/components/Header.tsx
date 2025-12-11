@@ -47,6 +47,10 @@ const Header = ({
       type: "eraser",
       icon: Eraser,
     },
+    {
+      type: "pencil",
+      icon: Pencil,
+    },
   ];
 
   return (
@@ -69,7 +73,7 @@ const Header = ({
 
       {isLoggedIn ? (
           <button 
-            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium px-3 py-1.5 rounded-md transition-colors"
+            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium px-3 py-1.5 rounded-md transition-colors cursor-pointer"
             onClick={() => {
               navigator.clipboard.writeText(window.location.href);
               alert("Link copied to clipboard!");
@@ -78,9 +82,7 @@ const Header = ({
             <Share2 className="w-4 h-4" />
             Share
           </button>
-        ) : (
-          <div className="text-xs text-gray-400 px-2">Log in to share</div>
-        )}
+        ) : null}
       </div>
     </div>
   );

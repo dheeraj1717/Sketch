@@ -1,13 +1,14 @@
 import { Draw } from "@/draw/draw";
 import { useEffect, useRef, useState } from "react";
+import { CanvasControls } from "./CanvasControls";
 
 export default function Canvas({
   roomId,
   socket,
-  selectedTool = "rect"
+  selectedTool = "rect",
 }: {
   roomId: string;
-  socket: WebSocket;
+  socket: WebSocket | null;
   selectedTool?: string;
 }) {
   const [drawInstance, setDrawInstance] = useState<Draw | null>(null);
@@ -15,7 +16,7 @@ export default function Canvas({
   const [transform, setTransform] = useState({
     x: 0,
     y: 0,
-    scale: 1
+    scale: 1,
   });
   const transformRef = useRef(transform);
 
@@ -31,7 +32,12 @@ export default function Canvas({
   // Initialize Draw class
   useEffect(() => {
     if (canvasRef.current && socket) {
-      const drawClassInstance = new Draw(canvasRef.current, roomId, socket, transformRef);
+      const drawClassInstance = new Draw(
+        canvasRef.current,
+        roomId,
+        socket,
+        transformRef
+      );
       setDrawInstance(drawClassInstance);
 
       return () => {
@@ -59,10 +65,10 @@ export default function Canvas({
         }
       }
     };
-    
+
     handleResize();
     window.addEventListener("resize", handleResize);
-    
+
     return () => {
       window.removeEventListener("resize", handleResize);
     };
@@ -83,7 +89,7 @@ export default function Canvas({
         isDragging = true;
         lastX = e.clientX;
         lastY = e.clientY;
-        canvas.style.cursor = 'grabbing';
+        canvas.style.cursor = "grabbing";
         e.preventDefault();
       }
       // Shift + Left mouse for panning
@@ -91,7 +97,7 @@ export default function Canvas({
         isDragging = true;
         lastX = e.clientX;
         lastY = e.clientY;
-        canvas.style.cursor = 'grabbing';
+        canvas.style.cursor = "grabbing";
         e.preventDefault();
       }
     };
@@ -100,13 +106,13 @@ export default function Canvas({
       if (isDragging) {
         const deltaX = e.clientX - lastX;
         const deltaY = e.clientY - lastY;
-        
-        setTransform(prev => ({
+
+        setTransform((prev) => ({
           ...prev,
           x: prev.x + deltaX,
-          y: prev.y + deltaY
+          y: prev.y + deltaY,
         }));
-        
+
         lastX = e.clientX;
         lastY = e.clientY;
         e.preventDefault();
@@ -116,32 +122,32 @@ export default function Canvas({
     const handleMouseUp = (e: MouseEvent) => {
       if (isDragging) {
         isDragging = false;
-        canvas.style.cursor = 'default';
+        canvas.style.cursor = "default";
         e.preventDefault();
       }
     };
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
-      
+
       // Check if Ctrl key is pressed for zoom, otherwise pan
       if (e.ctrlKey || e.metaKey) {
         // Zoom behavior (Ctrl + scroll)
         const rect = canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
-        
+
         const scaleFactor = e.deltaY > 0 ? 0.9 : 1.1;
-        
-        setTransform(prev => {
+
+        setTransform((prev) => {
           const newScale = Math.max(0.1, Math.min(5, prev.scale * scaleFactor));
-          
+
           // Zoom towards mouse position
           const scaleChange = newScale / prev.scale;
           return {
             scale: newScale,
             x: mouseX - (mouseX - prev.x) * scaleChange,
-            y: mouseY - (mouseY - prev.y) * scaleChange
+            y: mouseY - (mouseY - prev.y) * scaleChange,
           };
         });
       } else {
@@ -149,63 +155,63 @@ export default function Canvas({
         const panSpeed = 1;
         const deltaX = e.deltaX * panSpeed;
         const deltaY = e.deltaY * panSpeed;
-        
-        setTransform(prev => ({
+
+        setTransform((prev) => ({
           ...prev,
           x: prev.x - deltaX,
-          y: prev.y - deltaY
+          y: prev.y - deltaY,
         }));
       }
     };
 
     // Keyboard shortcuts
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && !e.repeat) {
-        canvas.style.cursor = 'grab';
+      if (e.code === "Space" && !e.repeat) {
+        canvas.style.cursor = "grab";
         e.preventDefault();
       }
-      
+
       // Reset view with 'R' key
-      if (e.code === 'KeyR') {
+      if (e.code === "KeyR") {
         setTransform({
           x: 0,
           y: 0,
-          scale: 1
+          scale: 1,
         });
       }
-      
+
       // Fit to center with 'F' key
-      if (e.code === 'KeyF') {
+      if (e.code === "KeyF") {
         setTransform({
           x: canvas.width / 2,
           y: canvas.height / 2,
-          scale: 1
+          scale: 1,
         });
       }
-      
+
       // Arrow keys for panning
       const panStep = 50;
-      if (e.code === 'ArrowUp') {
-        setTransform(prev => ({ ...prev, y: prev.y + panStep }));
+      if (e.code === "ArrowUp") {
+        setTransform((prev) => ({ ...prev, y: prev.y + panStep }));
         e.preventDefault();
       }
-      if (e.code === 'ArrowDown') {
-        setTransform(prev => ({ ...prev, y: prev.y - panStep }));
+      if (e.code === "ArrowDown") {
+        setTransform((prev) => ({ ...prev, y: prev.y - panStep }));
         e.preventDefault();
       }
-      if (e.code === 'ArrowLeft') {
-        setTransform(prev => ({ ...prev, x: prev.x + panStep }));
+      if (e.code === "ArrowLeft") {
+        setTransform((prev) => ({ ...prev, x: prev.x + panStep }));
         e.preventDefault();
       }
-      if (e.code === 'ArrowRight') {
-        setTransform(prev => ({ ...prev, x: prev.x - panStep }));
+      if (e.code === "ArrowRight") {
+        setTransform((prev) => ({ ...prev, x: prev.x - panStep }));
         e.preventDefault();
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
-        canvas.style.cursor = 'default';
+      if (e.code === "Space") {
+        canvas.style.cursor = "default";
       }
     };
 
@@ -216,19 +222,19 @@ export default function Canvas({
 
     const handleTouchStart = (e: TouchEvent) => {
       e.preventDefault();
-      
+
       if (e.touches.length === 2) {
         // Pinch to zoom
         const touch1 = e.touches[0];
         const touch2 = e.touches[1];
         touchStartDistance = Math.sqrt(
           Math.pow(touch2.clientX - touch1.clientX, 2) +
-          Math.pow(touch2.clientY - touch1.clientY, 2)
+            Math.pow(touch2.clientY - touch1.clientY, 2)
         );
         touchStartTransform = { ...transform };
         touchStartCenter = {
           x: (touch1.clientX + touch2.clientX) / 2,
-          y: (touch1.clientY + touch2.clientY) / 2
+          y: (touch1.clientY + touch2.clientY) / 2,
         };
       } else if (e.touches.length === 1) {
         // Pan
@@ -240,42 +246,45 @@ export default function Canvas({
 
     const handleTouchMove = (e: TouchEvent) => {
       e.preventDefault();
-      
+
       if (e.touches.length === 2) {
         // Pinch to zoom
         const touch1 = e.touches[0];
         const touch2 = e.touches[1];
         const currentDistance = Math.sqrt(
           Math.pow(touch2.clientX - touch1.clientX, 2) +
-          Math.pow(touch2.clientY - touch1.clientY, 2)
+            Math.pow(touch2.clientY - touch1.clientY, 2)
         );
-        
+
         if (touchStartDistance > 0) {
           const scaleFactor = currentDistance / touchStartDistance;
-          const newScale = Math.max(0.1, Math.min(5, touchStartTransform.scale * scaleFactor));
-          
+          const newScale = Math.max(
+            0.1,
+            Math.min(5, touchStartTransform.scale * scaleFactor)
+          );
+
           const currentCenter = {
             x: (touch1.clientX + touch2.clientX) / 2,
-            y: (touch1.clientY + touch2.clientY) / 2
+            y: (touch1.clientY + touch2.clientY) / 2,
           };
-          
+
           setTransform({
             scale: newScale,
             x: touchStartTransform.x + (currentCenter.x - touchStartCenter.x),
-            y: touchStartTransform.y + (currentCenter.y - touchStartCenter.y)
+            y: touchStartTransform.y + (currentCenter.y - touchStartCenter.y),
           });
         }
       } else if (e.touches.length === 1 && isDragging) {
         // Pan
         const deltaX = e.touches[0].clientX - lastX;
         const deltaY = e.touches[0].clientY - lastY;
-        
-        setTransform(prev => ({
+
+        setTransform((prev) => ({
           ...prev,
           x: prev.x + deltaX,
-          y: prev.y + deltaY
+          y: prev.y + deltaY,
         }));
-        
+
         lastX = e.touches[0].clientX;
         lastY = e.touches[0].clientY;
       }
@@ -287,28 +296,28 @@ export default function Canvas({
     };
 
     // Add event listeners
-    canvas.addEventListener('mousedown', handleMouseDown);
-    canvas.addEventListener('mousemove', handleMouseMove);
-    canvas.addEventListener('mouseup', handleMouseUp);
-    canvas.addEventListener('wheel', handleWheel, { passive: false });
-    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
-    canvas.addEventListener('touchend', handleTouchEnd);
-    
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    canvas.addEventListener("mousedown", handleMouseDown);
+    canvas.addEventListener("mousemove", handleMouseMove);
+    canvas.addEventListener("mouseup", handleMouseUp);
+    canvas.addEventListener("wheel", handleWheel, { passive: false });
+    canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
+    canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
+    canvas.addEventListener("touchend", handleTouchEnd);
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
 
     return () => {
-      canvas.removeEventListener('mousedown', handleMouseDown);
-      canvas.removeEventListener('mousemove', handleMouseMove);
-      canvas.removeEventListener('mouseup', handleMouseUp);
-      canvas.removeEventListener('wheel', handleWheel);
-      canvas.removeEventListener('touchstart', handleTouchStart);
-      canvas.removeEventListener('touchmove', handleTouchMove);
-      canvas.removeEventListener('touchend', handleTouchEnd);
-      
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      canvas.removeEventListener("mousedown", handleMouseDown);
+      canvas.removeEventListener("mousemove", handleMouseMove);
+      canvas.removeEventListener("mouseup", handleMouseUp);
+      canvas.removeEventListener("wheel", handleWheel);
+      canvas.removeEventListener("touchstart", handleTouchStart);
+      canvas.removeEventListener("touchmove", handleTouchMove);
+      canvas.removeEventListener("touchend", handleTouchEnd);
+
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
     };
   }, [transform]);
 
@@ -318,25 +327,13 @@ export default function Canvas({
         ref={canvasRef}
         className="cursor-crosshair touch-none"
         style={{
-          width: '100vw',
-          height: '100vh',
+          width: "100vw",
+          height: "100vh",
         }}
       />
-      
+
       {/* UI Controls */}
-      <div className="absolute top-4 left-4 bg-black/50 text-white p-2 rounded text-sm">
-        <div>Zoom: {(transform.scale * 100).toFixed(0)}%</div>
-        <div>Pan: ({transform.x.toFixed(0)}, {transform.y.toFixed(0)})</div>
-        <div>Tool: {selectedTool}</div>
-        <div className="mt-2 text-xs">
-          <div>• Shift+Drag or Middle Mouse: Pan</div>
-          <div>• Ctrl+Scroll: Zoom</div>
-          <div>• Scroll: Pan</div>
-          <div>• Arrow Keys: Pan</div>
-          <div>• R: Reset view</div>
-          <div>• F: Center view</div>
-        </div>
-      </div>
+      <CanvasControls transform={transform} selectedTool={selectedTool} />
     </div>
   );
 }

@@ -28,12 +28,25 @@ type Shapes =
       x: number;
       y: number;
       points: [number, number, number, number];
+    }
+  | {
+      type: "pencil";
+      x: number;
+      y: number;
+      points: { x: number; y: number }[];
     };
+
+type Cursor = {
+  x: number;
+  y: number;
+  userId: string;
+  color: string;
+};
 
 export class Draw {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
-  private socket: WebSocket;
+  private socket: WebSocket | null;
   private roomId: string;
   private existingShapes: Shapes[] = [];
   private clicked: boolean = false;
@@ -54,11 +67,14 @@ export class Draw {
   private selectedShapeIndex: number = -1;
   private isDraggingShape: boolean = false;
   private dragOffset: { x: number; y: number } = { x: 0, y: 0 };
+  private cursors: Map<string, Cursor> = new Map();
+  private lastCursorUpdate: number = 0;
+  private currentPencilStroke: { x: number; y: number }[] = [];
 
   constructor(
     canvas: HTMLCanvasElement,
     roomId: string,
-    socket: WebSocket,
+    socket: WebSocket | null,
     transformRef: React.MutableRefObject<{
       x: number;
       y: number;
@@ -93,12 +109,42 @@ export class Draw {
   }
 
   initHandlers() {
+    if (!this.socket) return;
     this.socket.onmessage = (event) => {
       const message = JSON.parse(event.data);
       if (message.type === "chat") {
         const parsedShapes = message.shape;
         this.existingShapes.push(parsedShapes);
         this.redrawCanvas();
+      } else if (message.type === "shapeUpdate") {
+        const updatedShape = message.shape;
+        const index = this.existingShapes.findIndex(
+          (s) => (s as any).id === updatedShape.id
+        );
+        if (index !== -1) {
+          this.existingShapes[index] = updatedShape;
+          this.redrawCanvas();
+        }
+      } else if (message.type === "cursor") {
+        // Update cursor position
+        this.cursors.set(message.userId, {
+          x: message.x,
+          y: message.y,
+          userId: message.userId,
+          color:
+            "#" +
+            (((1 << 24) * Math.random()) | 0).toString(16).padStart(6, "0"), // Random color or consistent based on ID
+        });
+        this.redrawCanvas();
+      } else if (message.type === "shapeDeleted") {
+        const shapeId = message.shapeId;
+        const index = this.existingShapes.findIndex(
+          (s) => (s as any).id === shapeId
+        );
+        if (index !== -1) {
+          this.existingShapes.splice(index, 1);
+          this.redrawCanvas();
+        }
       }
     };
   }
@@ -186,13 +232,15 @@ export class Draw {
 
     this.existingShapes.push(newShape);
 
-    this.socket.send(
-      JSON.stringify({
-        type: "chat",
-        shape: newShape,
-        roomId: this.roomId,
-      })
-    );
+    if (this.socket) {
+        this.socket.send(
+        JSON.stringify({
+            type: "chat",
+            shape: newShape,
+            roomId: this.roomId,
+        })
+        );
+    }
 
     this.removeTextInput();
     this.redrawCanvas();
@@ -231,6 +279,34 @@ export class Draw {
       const isSelected =
         this.currentTool === "move" && index === this.selectedShapeIndex;
       this.drawShape(shape, isHovered, isSelected);
+    });
+
+    this.ctx.restore();
+
+    // Draw cursors
+    this.drawCursors();
+  }
+
+  drawCursors() {
+    if (!this.ctx) return;
+
+    const transform = this.transformRef.current;
+    this.ctx.save();
+
+    this.cursors.forEach((cursor) => {
+      // Convert world coordinates to screen coordinates
+      const screenX = cursor.x * transform.scale + transform.x;
+      const screenY = cursor.y * transform.scale + transform.y;
+
+      this.ctx.beginPath();
+      this.ctx.moveTo(screenX, screenY);
+      this.ctx.lineTo(screenX + 15, screenY + 5);
+      this.ctx.lineTo(screenX + 5, screenY + 15);
+      this.ctx.fill();
+
+      // Optional: Draw name/ID
+      //   this.ctx.fillStyle = cursor.color;
+      //   this.ctx.fillText(cursor.userId.slice(0,4), screenX + 10, screenY + 20);
     });
 
     this.ctx.restore();
@@ -343,6 +419,32 @@ export class Draw {
         const maxY = Math.max(shape.points[1], shape.points[3]);
         this.drawSelectionBox(minX, minY, maxX - minX, maxY - minY);
       }
+    } else if (shape.type === "pencil") {
+      this.ctx.strokeStyle = strokeStyle;
+      this.ctx.lineWidth = isHovered ? 4 / transform.scale : lineWidth;
+      this.ctx.beginPath();
+      if (shape.points.length > 0) {
+        this.ctx.moveTo(shape.points[0].x, shape.points[0].y);
+        for (let i = 1; i < shape.points.length; i++) {
+          this.ctx.lineTo(shape.points[i].x, shape.points[i].y);
+        }
+      }
+      this.ctx.stroke();
+
+      if (isSelected) {
+        // Calculate bounds
+        let minX = Infinity,
+          minY = Infinity,
+          maxX = -Infinity,
+          maxY = -Infinity;
+        shape.points.forEach((p) => {
+          minX = Math.min(minX, p.x);
+          minY = Math.min(minY, p.y);
+          maxX = Math.max(maxX, p.x);
+          maxY = Math.max(maxY, p.y);
+        });
+        this.drawSelectionBox(minX, minY, maxX - minX, maxY - minY);
+      }
     }
 
     this.ctx.restore();
@@ -403,11 +505,13 @@ export class Draw {
     } else if (shape.type === "circle") {
       shape.x += deltaX;
       shape.y += deltaY;
-    } else if (shape.type === "line") {
-      shape.points[0] += deltaX;
-      shape.points[1] += deltaY;
-      shape.points[2] += deltaX;
-      shape.points[3] += deltaY;
+      shape.x += deltaX;
+      shape.y += deltaY;
+    } else if (shape.type === "pencil") {
+      shape.points.forEach((p) => {
+        p.x += deltaX;
+        p.y += deltaY;
+      });
       shape.x += deltaX;
       shape.y += deltaY;
     }
@@ -457,13 +561,15 @@ export class Draw {
         const shapeToDelete = this.existingShapes[shapeIndex];
         this.existingShapes.splice(shapeIndex, 1);
 
-        this.socket.send(
-          JSON.stringify({
-            type: "deleteShape",
-            shapeId: (shapeToDelete as any).id,
-            roomId: this.roomId,
-          })
-        );
+        if (this.socket) {
+            this.socket.send(
+            JSON.stringify({
+                type: "deleteShape",
+                shapeId: (shapeToDelete as any).id,
+                roomId: this.roomId,
+            })
+            );
+        }
 
         this.redrawCanvas();
       }
@@ -492,6 +598,11 @@ export class Draw {
             y: coords.y - shape.y,
           };
         } else if (shape.type === "line") {
+          this.dragOffset = {
+            x: coords.x - shape.x,
+            y: coords.y - shape.y,
+          };
+        } else if (shape.type === "pencil") {
           this.dragOffset = {
             x: coords.x - shape.x,
             y: coords.y - shape.y,
@@ -526,6 +637,10 @@ export class Draw {
     this.clicked = true;
     this.startX = coords.x;
     this.startY = coords.y;
+
+    if (this.currentTool === "pencil") {
+      this.currentPencilStroke = [{ x: coords.x, y: coords.y }];
+    }
   };
 
   mouseUpHandler = (e: MouseEvent) => {
@@ -538,13 +653,16 @@ export class Draw {
       const movedShape = this.existingShapes[this.selectedShapeIndex];
 
       // Send update to server
-      this.socket.send(
-        JSON.stringify({
-          type: "shapeUpdate",
-          shape: movedShape,
-          roomId: this.roomId,
-        })
-      );
+      // Send update to server
+      if (this.socket) {
+          this.socket.send(
+            JSON.stringify({
+            type: "shapeUpdate",
+            shape: movedShape,
+            roomId: this.roomId,
+            })
+        );
+      }
 
       this.isDraggingShape = false;
       this.canvas.style.cursor = "default";
@@ -589,18 +707,30 @@ export class Draw {
           y: this.startY,
           points: [this.startX, this.startY, coords.x, coords.y],
         };
+      } else if (
+        this.currentTool === "pencil" &&
+        this.currentPencilStroke.length > 1
+      ) {
+        newShape = {
+          type: "pencil" as const,
+          x: this.startX,
+          y: this.startY,
+          points: this.currentPencilStroke,
+        };
       }
 
       if (newShape) {
         this.existingShapes.push(newShape);
 
-        this.socket.send(
-          JSON.stringify({
-            type: "chat",
-            shape: newShape,
-            roomId: this.roomId,
-          })
-        );
+        if (this.socket) {
+            this.socket.send(
+            JSON.stringify({
+                type: "chat",
+                shape: newShape,
+                roomId: this.roomId,
+            })
+            );
+        }
       }
     } else if (this.currentTool === "text") {
       // Single click for text tool
@@ -637,6 +767,9 @@ export class Draw {
       } else if (shape.type === "line") {
         deltaX = newX - shape.x;
         deltaY = newY - shape.y;
+      } else if (shape.type === "pencil") {
+        deltaX = newX - shape.x;
+        deltaY = newY - shape.y;
       }
 
       this.moveShape(shape, deltaX, deltaY);
@@ -651,8 +784,7 @@ export class Draw {
         this.hoveredShapeIndex = newHoveredIndex;
         this.redrawCanvas();
       }
-      this.canvas.style.cursor =
-        newHoveredIndex !== -1 ? "pointer" : "default";
+      this.canvas.style.cursor = newHoveredIndex !== -1 ? "pointer" : "default";
       return;
     }
 
@@ -699,11 +831,39 @@ export class Draw {
         2 * Math.PI
       );
       this.ctx.stroke();
-    } else if (this.currentTool === "line") {
-      this.ctx.beginPath();
-      this.ctx.moveTo(this.startX, this.startY);
       this.ctx.lineTo(coords.x, coords.y);
       this.ctx.stroke();
+    } else if (this.currentTool === "pencil") {
+      this.currentPencilStroke.push({ x: coords.x, y: coords.y });
+      this.ctx.beginPath();
+      if (this.currentPencilStroke.length > 0) {
+        this.ctx.moveTo(
+          this.currentPencilStroke[0].x,
+          this.currentPencilStroke[0].y
+        );
+        for (let i = 1; i < this.currentPencilStroke.length; i++) {
+          this.ctx.lineTo(
+            this.currentPencilStroke[i].x,
+            this.currentPencilStroke[i].y
+          );
+        }
+      }
+      this.ctx.stroke();
+    }
+
+    // Send cursor update
+    const now = Date.now();
+    if (now - this.lastCursorUpdate > 50) {
+      // 20fps
+      this.lastCursorUpdate = now;
+      this.socket.send(
+        JSON.stringify({
+          type: "cursor",
+          x: coords.x,
+          y: coords.y,
+          roomId: this.roomId,
+        })
+      );
     }
 
     this.ctx.restore();
@@ -782,6 +942,22 @@ export class Draw {
         const distance = this.distanceFromPointToLine(x, y, x1, y1, x2, y2);
         if (distance <= tolerance) {
           return i;
+        }
+      } else if (shape.type === "pencil") {
+        // Check distance to any segment
+        const tolerance = 5;
+        for (let k = 0; k < shape.points.length - 1; k++) {
+          const p1 = shape.points[k];
+          const p2 = shape.points[k + 1];
+          const dist = this.distanceFromPointToLine(
+            x,
+            y,
+            p1.x,
+            p1.y,
+            p2.x,
+            p2.y
+          );
+          if (dist <= tolerance) return i;
         }
       }
     }

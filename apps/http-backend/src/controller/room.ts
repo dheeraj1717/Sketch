@@ -69,4 +69,52 @@ roomRouter.get("/canvas/:roomId", async (req: AuthenticatedRequest, res) => {
   });
 });
 
+roomRouter.get("/my-rooms", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    const userId = req.userId;
+    try {
+        const rooms = await client.room.findMany({
+            where: {
+                adminId: userId
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
+        });
+        res.status(200).json({ rooms });
+    } catch(e) {
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+roomRouter.delete("/:roomId", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    const roomId = req.params.roomId;
+    const userId = req.userId;
+
+    try {
+        const room = await client.room.findFirst({
+            where: {
+                id: roomId,
+                adminId: userId
+            }
+        });
+
+        if (!room) {
+            return res.status(404).json({ message: "Room not found or unauthorized" });
+        }
+
+        // Delete shapes first (cascade ideally, but manual here to be safe if not configured)
+        await client.shapes.deleteMany({
+            where: { roomId: roomId }
+        });
+
+        await client.room.delete({
+            where: { id: roomId }
+        });
+
+        res.status(200).json({ message: "Room deleted successfully" });
+    } catch(e) {
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
 export default roomRouter;
