@@ -31,7 +31,7 @@ export default function Canvas({
 
   // Initialize Draw class
   useEffect(() => {
-    if (canvasRef.current && socket) {
+    if (canvasRef.current) {
       const drawClassInstance = new Draw(
         canvasRef.current,
         roomId,
@@ -329,6 +329,7 @@ export default function Canvas({
         style={{
           width: "100vw",
           height: "100vh",
+          backgroundColor: "rgb(30, 30, 30)",
         }}
       />
 

@@ -70,10 +70,28 @@ export default function History() {
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
             <h1 className="text-3xl font-bold text-gray-900">My Rooms</h1>
-            <Link href="/" className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">
+            <button 
+                onClick={async () => {
+                    try {
+                        const roomId = Math.random().toString(36).substring(2, 9);
+                        const res = await axios.post(`${API_BASE}/room/create-room`, {
+                            name: roomId
+                        }, {
+                            headers: { Authorization: token }
+                        });
+                        
+                        if (res.data.roomId) {
+                            router.push(`/canvas/${res.data.roomId}`);
+                        }
+                    } catch (e) {
+                         alert("Failed to create room");
+                    }
+                }}
+                className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+            >
                 <Plus className="w-4 h-4" />
                 New Room
-            </Link>
+            </button>
         </div>
 
         {rooms.length === 0 ? (
@@ -83,9 +101,27 @@ export default function History() {
                 </div>
                 <h3 className="text-lg font-medium text-gray-900 mb-1">No rooms found</h3>
                 <p className="text-gray-500 mb-6">Create your first room to start collaborating!</p>
-                <Link href="/" className="text-purple-600 font-medium hover:underline">
+                <button 
+                    onClick={async () => {
+                        try {
+                            const roomId = Math.random().toString(36).substring(2, 9);
+                            const res = await axios.post(`${API_BASE}/room/create-room`, {
+                                name: roomId
+                            }, {
+                                headers: { Authorization: token }
+                            });
+                            
+                            if (res.data.roomId) {
+                                router.push(`/canvas/${res.data.roomId}`);
+                            }
+                        } catch (e) {
+                             alert("Failed to create room");
+                        }
+                    }}
+                    className="text-purple-600 font-medium hover:underline"
+                >
                     Create Room
-                </Link>
+                </button>
             </div>
         ) : (
             <div className="grid gap-4">

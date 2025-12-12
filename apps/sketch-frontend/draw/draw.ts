@@ -94,8 +94,19 @@ export class Draw {
   }
 
   async init() {
-    const shapes = await getExistingShapes(this.roomId);
-    this.existingShapes = shapes;
+    // Only fetch shapes from server if we have a socket connection
+    if (this.socket) {
+      try {
+        const shapes = await getExistingShapes(this.roomId);
+        this.existingShapes = shapes;
+      } catch (error) {
+        console.log("Could not fetch shapes, starting with empty canvas");
+        this.existingShapes = [];
+      }
+    } else {
+      // Offline mode: start with empty canvas
+      this.existingShapes = [];
+    }
     this.redrawCanvas();
   }
 
@@ -233,13 +244,13 @@ export class Draw {
     this.existingShapes.push(newShape);
 
     if (this.socket) {
-        this.socket.send(
+      this.socket.send(
         JSON.stringify({
-            type: "chat",
-            shape: newShape,
-            roomId: this.roomId,
+          type: "chat",
+          shape: newShape,
+          roomId: this.roomId,
         })
-        );
+      );
     }
 
     this.removeTextInput();
@@ -562,13 +573,13 @@ export class Draw {
         this.existingShapes.splice(shapeIndex, 1);
 
         if (this.socket) {
-            this.socket.send(
+          this.socket.send(
             JSON.stringify({
-                type: "deleteShape",
-                shapeId: (shapeToDelete as any).id,
-                roomId: this.roomId,
+              type: "deleteShape",
+              shapeId: (shapeToDelete as any).id,
+              roomId: this.roomId,
             })
-            );
+          );
         }
 
         this.redrawCanvas();
@@ -655,12 +666,12 @@ export class Draw {
       // Send update to server
       // Send update to server
       if (this.socket) {
-          this.socket.send(
-            JSON.stringify({
+        this.socket.send(
+          JSON.stringify({
             type: "shapeUpdate",
             shape: movedShape,
             roomId: this.roomId,
-            })
+          })
         );
       }
 
@@ -723,13 +734,13 @@ export class Draw {
         this.existingShapes.push(newShape);
 
         if (this.socket) {
-            this.socket.send(
+          this.socket.send(
             JSON.stringify({
-                type: "chat",
-                shape: newShape,
-                roomId: this.roomId,
+              type: "chat",
+              shape: newShape,
+              roomId: this.roomId,
             })
-            );
+          );
         }
       }
     } else if (this.currentTool === "text") {
@@ -856,14 +867,16 @@ export class Draw {
     if (now - this.lastCursorUpdate > 50) {
       // 20fps
       this.lastCursorUpdate = now;
-      this.socket.send(
-        JSON.stringify({
-          type: "cursor",
-          x: coords.x,
-          y: coords.y,
-          roomId: this.roomId,
-        })
-      );
+      if (this.socket) {
+        this.socket.send(
+          JSON.stringify({
+            type: "cursor",
+            x: coords.x,
+            y: coords.y,
+            roomId: this.roomId,
+          })
+        );
+      }
     }
 
     this.ctx.restore();

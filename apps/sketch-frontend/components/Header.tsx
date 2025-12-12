@@ -10,9 +10,11 @@ import {
   Slash,
   Square,
   Type,
-  Share2
+  Share2,
+  Home,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const Header = ({
   handleSelectTool,
@@ -22,6 +24,9 @@ const Header = ({
   selectedTool: string;
 }) => {
   const { isLoggedIn } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const isGuestMode = searchParams.get("mode") === "guest";
   const shapes = [
     {
       type: "move",
@@ -54,8 +59,19 @@ const Header = ({
   ];
 
   return (
-    <div className="fixed top-4 left-0 right-0 z-10 flex justify-center pointer-events-none">
-       {/* Toolbar - Pointer events auto to allow interaction */}
+    <div className="fixed top-4 left-0 right-0 z-10 flex justify-between px-4 pointer-events-none">
+      {/* Back to Home Button */}
+      <button
+        onClick={() => router.push("/")}
+        className="bg-white hover:bg-gray-50 p-3 flex items-center gap-2 rounded-lg shadow-lg pointer-events-auto transition-all hover:shadow-xl group"
+      >
+        <Home className="w-5 h-5 text-gray-600 group-hover:text-purple-600 transition-colors" />
+        <span className="text-sm font-medium text-gray-700 group-hover:text-purple-600 transition-colors">
+          Home
+        </span>
+      </button>
+
+      {/* Toolbar - Pointer events auto to allow interaction */}
       <div className="bg-white p-3 flex gap-3 rounded-lg shadow-lg pointer-events-auto items-center">
         {shapes.map((s, i) => {
           const Icon = s.icon;
@@ -67,13 +83,13 @@ const Header = ({
             />
           );
         })}
-      
-      {/* Separator */}
-      <div className="w-px h-6 bg-gray-200 mx-2"></div>
 
-      {isLoggedIn ? (
-          <button 
-            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium px-3 py-1.5 rounded-md transition-colors cursor-pointer"
+        {/* Separator */}
+        <div className="w-px h-6 bg-gray-200 mx-2"></div>
+
+        {!isGuestMode && isLoggedIn ? (
+          <button
+            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium px-3 py-1.5 rounded-md transition-colors cursor-pointer shadow-md hover:shadow-lg"
             onClick={() => {
               navigator.clipboard.writeText(window.location.href);
               alert("Link copied to clipboard!");
@@ -84,6 +100,9 @@ const Header = ({
           </button>
         ) : null}
       </div>
+
+      {/* Empty div for spacing balance */}
+      <div className="w-[100px]"></div>
     </div>
   );
 };

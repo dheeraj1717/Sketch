@@ -25,7 +25,7 @@ export const featureCards = [
 export default function Home() {
   return (
     <div
-      className="min-h-screen relative overflow-hidden bg-cover bg-center bg-no-repeat"
+      className="relative overflow-hidden bg-cover bg-center bg-no-repeat pt-16"
       style={{
         backgroundImage: `url('/background.jpg')`,
         backgroundAttachment: "fixed", // Optional: creates parallax effect
@@ -44,7 +44,7 @@ export default function Home() {
       </div>
 
       {/* Main content */}
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-8 text-center py-10">
+      <div className="relative z-10 flex flex-col items-center justify-center px-8 text-center pb-10">
         {/* Logo */}
         <div className="mb-8">
           <div className="w-16 h-16 bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg mb-4 mx-auto relative">
