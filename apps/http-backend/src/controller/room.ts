@@ -117,4 +117,53 @@ roomRouter.delete("/:roomId", authMiddleware, async (req: AuthenticatedRequest, 
     }
 });
 
+// Rename room
+roomRouter.put("/:roomId", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    const roomId = req.params.roomId;
+    const userId = req.userId;
+    const parsedData = CreateRoomSchema.safeParse(req.body);
+
+    if (!parsedData.success) {
+        return res.status(400).json({ message: "Incorrect inputs" });
+    }
+
+    try {
+        const room = await client.room.findFirst({
+            where: {
+                id: roomId,
+                adminId: userId
+            }
+        });
+
+        if (!room) {
+            return res.status(404).json({ message: "Room not found or unauthorized" });
+        }
+
+        // Check if new name is already taken
+        const existingRoom = await client.room.findFirst({
+            where: {
+                slug: parsedData.data.name,
+                NOT: {
+                    id: roomId
+                }
+            }
+        });
+
+        if (existingRoom) {
+            return res.status(409).json({ message: "Room name already exists" });
+        }
+
+        const updatedRoom = await client.room.update({
+            where: { id: roomId },
+            data: {
+                slug: parsedData.data.name
+            }
+        });
+
+        res.status(200).json({ message: "Room updated successfully", room: updatedRoom });
+    } catch(e) {
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
 export default roomRouter;

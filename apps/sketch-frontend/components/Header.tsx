@@ -59,11 +59,11 @@ const Header = ({
   ];
 
   return (
-    <div className="fixed top-4 left-0 right-0 z-10 flex justify-between px-4 pointer-events-none">
+    <div className="fixed top-4 left-0 right-0 z-50 flex justify-between px-4 pointer-events-none">
       {/* Back to Home Button */}
       <button
         onClick={() => router.push("/")}
-        className="bg-white hover:bg-gray-50 p-3 flex items-center gap-2 rounded-lg shadow-lg pointer-events-auto transition-all hover:shadow-xl group"
+        className="bg-white hover:bg-gray-50 p-3 flex items-center gap-2 rounded-lg shadow-lg pointer-events-auto transition-all hover:shadow-xl group cursor-pointer"
       >
         <Home className="w-5 h-5 text-gray-600 group-hover:text-purple-600 transition-colors" />
         <span className="text-sm font-medium text-gray-700 group-hover:text-purple-600 transition-colors">

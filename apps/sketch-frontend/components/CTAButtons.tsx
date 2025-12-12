@@ -29,7 +29,7 @@ const CTAButtons = () => {
         const res = await axios.post(`${API_BASE}/room/create-room`, {
             name: roomId
         }, {
-            headers: { Authorization: token }
+            headers: { Authorization: `Bearer ${token}` }
         });
         
         if (res.data.roomId) {

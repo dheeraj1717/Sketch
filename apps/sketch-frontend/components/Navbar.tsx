@@ -71,7 +71,7 @@ export function Navbar() {
                       </Link>
                       <button
                         onClick={logout}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 w-full text-left transition-colors group/item"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 w-full text-left transition-colors group/item cursor-pointer"
                       >
                         <LogOut className="w-4 h-4 group-hover/item:scale-110 transition-transform" />
                         <span className="font-medium">Logout</span>
@@ -137,7 +137,7 @@ export function Navbar() {
                       logout();
                       setIsMenuOpen(false);
                     }}
-                    className="flex items-center gap-3 w-full text-left px-3 py-2.5 rounded-lg text-base font-medium text-red-600 hover:bg-red-50 transition-colors"
+                    className="flex items-center gap-3 w-full text-left px-3 py-2.5 rounded-lg text-base font-medium text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                   >
                     <LogOut className="w-5 h-5" />
                     Logout
@@ -149,7 +149,7 @@ export function Navbar() {
                     setIsAuthModalOpen(true);
                     setIsMenuOpen(false);
                   }}
-                  className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-purple-600 hover:bg-purple-50"
+                  className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-purple-600 hover:bg-purple-50 cursor-pointer"
                 >
                   Login
                 </button>
