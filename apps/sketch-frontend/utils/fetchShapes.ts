@@ -1,9 +1,8 @@
-import axios from "axios";
-import { API_BASE } from "./urls";
+import { apiClient } from "./apiClient";
 
 export async function getExistingShapes(roomId: string) {
   try {
-    const res = await axios.get(`${API_BASE}/room/canvas/${roomId}`);
+    const res = await apiClient.get(`/room/canvas/${roomId}`);
     const shapes = res.data.shapes;
 
     const mappedShapes = shapes.map((shape: any) => {

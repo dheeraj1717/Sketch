@@ -46,36 +46,36 @@ const createTokens = async (userId: string) => {
 };
 
 authRouter.post("/signup", async (req: Request, res: Response) => {
-  console.log(req.body);
-  const { name, email, username, password } = req.body;
-  const userExists = await client.user.findFirst({
-    where: {
-      email: email,
-    },
-  });
-  if (userExists) {
-    return res.status(409).json({
-      message: "User already exists",
-    });
-  }
-  const data = CreateUserSchema.safeParse(req.body);
-  console.log(data);
-  if (!data.success)
+  const parsedData = CreateUserSchema.safeParse(req.body);
+  if (!parsedData.success)
     return res.status(400).json({
       message: "Incorrect inputs",
     });
+
+  const { name, email, username, password } = parsedData.data;
+
+  const userExists = await client.user.findFirst({
+    where: {
+      OR: [{ email }, { username }],
+    },
+  });
+
+  if (userExists) {
+    return res.status(409).json({
+      message: userExists.email === email ? "Email already registered" : "Username already taken",
+    });
+  }
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
   const createdUser = await client.user.create({
     data: {
-      name: name,
-      email: email,
-      username: username,
+      name,
+      email,
+      username,
       password: hashedPassword,
     },
   });
-  console.log("user created", createdUser.name);
 
   const { accessToken, refreshToken } = await createTokens(createdUser.id);
 
@@ -118,7 +118,7 @@ authRouter.post("/signin", async (req: Request, res: Response) => {
 
   const user = await client.user.findFirst({
     where: {
-      email: email,
+      email: data.data.email,
     },
   });
 
@@ -128,9 +128,7 @@ authRouter.post("/signin", async (req: Request, res: Response) => {
     });
   }
 
-  const isPasswordValid = user
-    ? await bcrypt.compare(password, user.password)
-    : false;
+  const isPasswordValid = await bcrypt.compare(password, user.password);
 
   if (!isPasswordValid) {
     return res.status(400).json({
@@ -152,7 +150,15 @@ authRouter.post("/signin", async (req: Request, res: Response) => {
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     })
-    .json({ message: "Signed In Successfully!", accessToken });
+    .json({ 
+      message: "Signed In Successfully!", 
+      accessToken,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      }
+    });
 });
 
 authRouter.post("/refresh-token", async (req: Request, res: Response) => {
@@ -192,7 +198,7 @@ authRouter.post("/refresh-token", async (req: Request, res: Response) => {
     .cookie("accessToken", accessToken, {
       httpOnly: true,
       sameSite: "strict",
-      maxAge: 15 * 60 * 1000, // 15 min
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
     })
     .cookie("refreshToken", newRefreshToken, {
       httpOnly: true,

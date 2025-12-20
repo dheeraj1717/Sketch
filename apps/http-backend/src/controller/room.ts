@@ -86,7 +86,7 @@ roomRouter.get("/my-rooms", authMiddleware, async (req: AuthenticatedRequest, re
     }
 });
 
-roomRouter.delete("/:roomId", authMiddleware, async (req: AuthenticatedRequest, res) => {
+roomRouter.delete("/delete/:roomId", authMiddleware, async (req: AuthenticatedRequest, res) => {
     const roomId = req.params.roomId;
     const userId = req.userId;
 
@@ -118,7 +118,7 @@ roomRouter.delete("/:roomId", authMiddleware, async (req: AuthenticatedRequest, 
 });
 
 // Rename room
-roomRouter.put("/:roomId", authMiddleware, async (req: AuthenticatedRequest, res) => {
+roomRouter.put("/rename/:roomId", authMiddleware, async (req: AuthenticatedRequest, res) => {
     const roomId = req.params.roomId;
     const userId = req.userId;
     const parsedData = CreateRoomSchema.safeParse(req.body);

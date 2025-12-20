@@ -9,19 +9,24 @@ const app = express();
 // ------------------------------------------------
 // CORS Configuration
 // ------------------------------------------------
-const corsOptions: cors.CorsOptions = {
-  // IMPORTANT: Set this to the exact URL/PORT where your frontend is running.
-  // For example, if your client is on React's default port:
-  origin: "http://localhost:3000", 
-  
-  // CRITICAL: This enables the passing of cookies, authentication headers, etc.
-  credentials: true, 
-  
-  optionsSuccessStatus: 200, 
-};
+// ------------------------------------------------
+// CORS Configuration
+// ------------------------------------------------
+const allowedOrigins = ["http://localhost:3000", "http://127.0.0.1:3000"];
 
-// Apply CORS middleware before other middleware/routes
-app.use(cors(corsOptions)); 
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+}));
 
 app.use(express.json());
 app.use(cookieParser());

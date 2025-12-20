@@ -1,10 +1,12 @@
 "use client";
 import { Zap, Users, Maximize, Check, ArrowRight, PenTool, Layout, Share2 } from "lucide-react";
 import CTAButtons from "../components/CTAButtons";
-import Footer from "@/components/Footer";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import InforCard from "./_ui/InforCard";
+import { useCreateRoom } from "@/hooks/useCreateRoom";
+import { useAuth } from "@/context/AuthContext";
+import AuthModal from "@/components/AuthModal";
 
 const featureCards = [
   {
@@ -54,6 +56,17 @@ const useCases = [
 export default function Home() {
   const [scrollY, setScrollY] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const { isLoggedIn } = useAuth();
+  const { createRoom, loading } = useCreateRoom();
+
+  const handleBottomLaunch = () => {
+    if (isLoggedIn) {
+      createRoom();
+    } else {
+      setIsAuthModalOpen(true);
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -68,7 +81,7 @@ export default function Home() {
     <div className="min-h-screen flex flex-col bg-[#FDFDFD] selection:bg-purple-200">
       
       {/* Background Dot Pattern */}
-      <div className="fixed inset-0 z-0 opacity-[0.4]" 
+      <div className="fixed inset-0 z-0 opacity-[0.4] pointer-events-none" 
            style={{ 
              backgroundImage: 'radial-gradient(#CBD5E1 1px, transparent 1px)', 
              backgroundSize: '24px 24px' 
@@ -206,15 +219,24 @@ export default function Home() {
                  <p className="text-slate-300 text-lg mb-10 max-w-xl mx-auto">
                     Join the creative revolution. No credit card required.
                  </p>
-                 <button className="bg-white text-slate-900 px-10 py-5 rounded-full font-bold text-xl hover:bg-purple-50 transition-colors shadow-[0_0_40px_-10px_rgba(255,255,255,0.5)] flex items-center gap-3 mx-auto cursor-none">
-                    Launch Sketch <ArrowRight className="w-6 h-6" />
-                 </button>
-              </div>
-           </div>
-        </div>
+                  <button 
+                    onClick={handleBottomLaunch}
+                    disabled={loading}
+                    className={`bg-white text-slate-900 px-10 py-5 rounded-full font-bold text-xl hover:bg-purple-50 transition-colors shadow-[0_0_40px_-10px_rgba(255,255,255,0.5)] flex items-center gap-3 mx-auto cursor-pointer ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                  >
+                    {loading ? "Launching..." : "Launch Sketch"} <ArrowRight className="w-6 h-6" />
+                  </button>
+               </div>
+            </div>
+         </div>
       </section>
 
-      <Footer />
+      {isAuthModalOpen && (
+        <AuthModal 
+          handleShowAuthModal={() => setIsAuthModalOpen(false)} 
+          onAuthSuccess={(token) => { createRoom(token); }}
+        />
+      )}
     </div>
   );
 }

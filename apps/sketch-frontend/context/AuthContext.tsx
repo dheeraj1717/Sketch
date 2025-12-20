@@ -1,8 +1,8 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { API_BASE } from "@/utils/urls";
 import { useRouter } from "next/navigation";
+import { apiClient } from "@/utils/apiClient";
 
 interface User {
   id: string;
@@ -39,6 +39,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error("Failed to parse user info", e);
       }
     }
+
+    const handleSync = (e: any) => {
+       setToken(e.detail);
+    };
+
+    window.addEventListener("token-refreshed", handleSync as EventListener);
+    return () => window.removeEventListener("token-refreshed", handleSync as EventListener);
   }, []);
 
   const login = (newToken: string, newUser: User) => {
@@ -48,7 +55,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("user", JSON.stringify(newUser));
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await apiClient.post("/auth/logout");
+    } catch (e) {
+      console.error("Failed to logout from backend", e);
+    }
     setToken(null);
     setUser(null);
     localStorage.removeItem("accessToken");
@@ -57,8 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const checkAuth = async () => {
-    // Mostly handled by refreshing if needed, but for now we trust local state until a request fails
-    // or if we wanted to verify token validity explicitly on mount
+    // Mostly handled by refreshing if needed
   };
 
   return (

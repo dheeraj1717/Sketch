@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { useEffect, useState } from "react";
 import { X, User, Mail, Lock } from "lucide-react";
 import { API_BASE } from "@/utils/urls";
-import axios from "axios";
+import { apiClient } from "@/utils/apiClient";
 import { useAuth } from "@/context/AuthContext";
 
 interface AuthDTO {
@@ -17,10 +17,10 @@ const AuthModal = ({
   onAuthSuccess 
 }: { 
   handleShowAuthModal: () => void;
-  onAuthSuccess?: () => void;
+  onAuthSuccess?: (token: string) => void;
 }) => {
   const [isMounted, setIsMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState<"login" | "signup">("signup");
+  const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
   const { login } = useAuth();
   const [errorString, setErrorString] = useState("");
 
@@ -78,7 +78,7 @@ const AuthModal = ({
             password: data.password,
           };
 
-      const res = await axios.post(`${API_BASE}${endpoint}`, payload);
+      const res = await apiClient.post(endpoint, payload);
 
       if (res.status === 201 || res.status === 200) {
         const accessToken = res.data.accessToken;
@@ -95,7 +95,7 @@ const AuthModal = ({
         login(accessToken, user);
         handleShowAuthModal();
         if (onAuthSuccess) {
-          onAuthSuccess();
+          onAuthSuccess(accessToken);
         }
       }
     } catch (e: any) {
@@ -127,7 +127,7 @@ const AuthModal = ({
             Welcome
           </h1>
           <p className="text-gray-500 mt-2">
-            {activeTab === "signup"
+            {activeTab === "login"
               ? "Create your account to get started"
               : "Sign in to your account"}
           </p>
@@ -135,16 +135,7 @@ const AuthModal = ({
 
         {/* Tab Switcher */}
         <div className="flex bg-gray-50 rounded-xl p-1 mb-6">
-          <button
-            onClick={() => handleTabSwitch("signup")}
-            className={`flex-1 py-3 px-6 text-sm font-medium rounded-lg transition-all duration-200 cursor-pointer ${
-              activeTab === "signup"
-                ? "bg-white text-purple-600 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            Sign Up
-          </button>
+         
           <button
             onClick={() => handleTabSwitch("login")}
             className={`flex-1 py-3 px-6 text-sm font-medium rounded-lg transition-all duration-200 cursor-pointer ${
@@ -154,6 +145,16 @@ const AuthModal = ({
             }`}
           >
             Login
+          </button>
+           <button
+            onClick={() => handleTabSwitch("signup")}
+            className={`flex-1 py-3 px-6 text-sm font-medium rounded-lg transition-all duration-200 cursor-pointer ${
+              activeTab === "signup"
+                ? "bg-white text-purple-600 shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Sign Up
           </button>
         </div>
 

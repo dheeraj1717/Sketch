@@ -1,5 +1,4 @@
-import { API_BASE } from "@/utils/urls";
-import axios from "axios";
+import { apiClient } from "@/utils/apiClient";
 
 type Shapes =
   | {
@@ -274,7 +273,7 @@ export async function initDraw(
 
 async function getExistingShapes(roomId: string) {
   try {
-    const res = await axios.get(`${API_BASE}/room/canvas/${roomId}`);
+    const res = await apiClient.get(`/room/canvas/${roomId}`);
     const shapes = res.data.shapes;
     console.log("shapesrendered", shapes);
 

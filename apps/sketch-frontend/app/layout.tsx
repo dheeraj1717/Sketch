@@ -5,6 +5,7 @@ import { ToastProvider } from "@/context/ToastContext";
 import CustomCursor from "@/components/CustomCursor";
 import { AuthProvider } from "@/context/AuthContext";
 import { ConditionalNavbar } from "@/components/ConditionalNavbar";
+import { ConditionalFooter } from "@/components/ConditionalFooter";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,13 +30,16 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
       >
         <CustomCursor />
         <AuthProvider>
           <ToastProvider>
             <ConditionalNavbar />
-            {children}
+            <main className="flex-grow">
+              {children}
+            </main>
+            <ConditionalFooter />
           </ToastProvider>
         </AuthProvider>
       </body>

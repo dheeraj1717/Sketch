@@ -2,16 +2,14 @@
 import { PencilLine, SquareArrowOutUpRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import AuthModal from "./AuthModal";
-import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-
-import { API_BASE } from "@/utils/urls";
-import axios from "axios";
+import { useToast } from "@/context/ToastContext";
+import { useCreateRoom } from "@/hooks/useCreateRoom";
+import { useState, useEffect } from "react";
 
 const CTAButtons = () => {
   const [openAuth, setOpenAuth] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   // Prevent hydration mismatch
@@ -19,33 +17,12 @@ const CTAButtons = () => {
     setIsMounted(true);
   }, []);
 
-  const { isLoggedIn, token } = useAuth();
-
-  const createRoomAndNavigate = async () => {
-    if (loading) return;
-    setLoading(true);
-    try {
-        const roomId = Math.random().toString(36).substring(2, 9); // Fallback slug/name
-        const res = await axios.post(`${API_BASE}/room/create-room`, {
-            name: roomId
-        }, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        if (res.data.roomId) {
-            router.push(`/canvas/${res.data.roomId}`);
-        }
-    } catch (e) {
-        console.error("Failed to create room", e);
-        alert("Failed to create room");
-    } finally {
-        setLoading(false);
-    }
-  };
+  const { isLoggedIn } = useAuth();
+  const { createRoom, loading } = useCreateRoom();
 
   const handleStartCreating = () => {
     if (isLoggedIn) {
-      createRoomAndNavigate();
+      createRoom();
     } else {
       setOpenAuth(true);
     }
@@ -83,7 +60,9 @@ const CTAButtons = () => {
       {openAuth && (
         <AuthModal 
           handleShowAuthModal={handleShowAuthModal} 
-          onAuthSuccess={createRoomAndNavigate}
+          onAuthSuccess={(token) => {
+            createRoom(token);
+          }}
         />
       )}
     </div>
