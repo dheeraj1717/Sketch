@@ -36,7 +36,7 @@ const createTokens = async (userId: string) => {
     data: {
       refreshToken,
       userId,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     },
   });
   if (!addRefreshToken) {
@@ -203,7 +203,7 @@ authRouter.post("/refresh-token", async (req: Request, res: Response) => {
     .cookie("refreshToken", newRefreshToken, {
       httpOnly: true,
       sameSite: "strict",
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     })
     .json({
       message: "tokens refreshed!",
