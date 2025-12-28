@@ -56,7 +56,13 @@ pnpm install
 echo "🗄️ Generating Prisma Client..."
 pnpm --filter db generate
 
-# 8. Build Backends
+# 8. Build Dependencies (Explicit Order)
+echo "🛠️ Building common packages..."
+pnpm --filter @repo/db build
+pnpm --filter @repo/common build
+pnpm --filter @repo/backend-common build
+
+# 9. Build Backends
 echo "🛠️ Building http-backend..."
 pnpm --filter http-backend build
 
