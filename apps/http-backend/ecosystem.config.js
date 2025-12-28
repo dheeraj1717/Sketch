@@ -7,6 +7,7 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         PORT: 3001,
+        FRONTEND_URL: "http://65.0.170.72",
       },
     },
   ],
