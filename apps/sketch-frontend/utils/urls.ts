@@ -1,2 +1,2 @@
-export const API_BASE = "http://localhost:8000";
-export const WS_BASE = "ws://localhost:8080";
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+export const WS_BASE = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080";
