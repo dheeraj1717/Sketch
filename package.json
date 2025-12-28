@@ -17,5 +17,14 @@
   "engines": {
     "node": ">=20",
     "pnpm": "9.15.0"
+  },
+  "pnpm": {
+  "overrides": {
+    "next": "15.5.9",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-server-dom-webpack": "19.2.3",
+    "react-server-dom-turbopack": "19.2.3"
   }
+}
 }
