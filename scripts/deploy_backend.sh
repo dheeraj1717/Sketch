@@ -63,7 +63,32 @@ pnpm --filter http-backend build
 echo "🛠️ Building ws-backend..."
 pnpm --filter ws-backend build
 
-# 9. Configure Environment Variables (User must provide .env)
+# 9a. Configure Nginx (Reverse Proxy)
+echo "🌐 Configuring Nginx..."
+sudo rm -f /etc/nginx/sites-enabled/default
+
+# Create Nginx Config
+sudo bash -c 'cat > /etc/nginx/sites-available/sketch-backend <<EOF
+server {
+    listen 80;
+    server_name _;
+
+    location / {
+        proxy_pass http://localhost:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+    }
+}
+EOF'
+
+sudo ln -sf /etc/nginx/sites-available/sketch-backend /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+
+# 10. Configure Environment Variables (User must provide .env)
 if [ ! -f .env ]; then
     echo "⚠️  WARNING: .env file is missing!"
     echo "creating a placeholder .env file..."
@@ -90,5 +115,5 @@ cd ../..
 pm2 save
 
 echo "✅ Backend Deployment Complete!"
-echo "👉 Make sure to update your .env file with DATABASE_URL and JWT_SECRET"
+echo "👉 Make sure to update your .env file with DATABASE_URL, JWT_SECRET, and FRONTEND_URL"
 echo "👉 Ensure Security Groups allow ports 3001 and 8080"
