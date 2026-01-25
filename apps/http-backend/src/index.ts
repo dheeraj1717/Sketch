@@ -9,27 +9,26 @@ const app = express();
 // ------------------------------------------------
 // CORS Configuration
 // ------------------------------------------------
-// ------------------------------------------------
-// CORS Configuration
-// ------------------------------------------------
 const allowedOrigins = [
   "http://localhost:3000", 
   "http://127.0.0.1:3000",
-  process.env.FRONTEND_URL
+  process.env.FRONTEND_URL || ""
 ];
 
 console.log("Allowed Origins:", allowedOrigins);
-console.log("FRONTEND_URL env var:", process.env.FRONTEND_URL);
 
 app.use(
   cors({
     origin: function (origin, callback) {
       if (!origin) return callback(null, true);
       
-      if (allowedOrigins.includes(origin) || process.env.NODE_ENV !== "production") {
+      const normalizedOrigin = origin.replace(/\/$/, "");
+      const isAllowed = allowedOrigins.some(ao => ao && ao.replace(/\/$/, "") === normalizedOrigin);
+
+      if (isAllowed || process.env.NODE_ENV !== "production") {
         callback(null, true);
       } else {
-        console.log("Blocked by CORS:", origin);
+        console.log("CORS REJECTED. Origin:", origin, "Allowed:", allowedOrigins);
         callback(new Error("Not allowed by CORS"));
       }
     },
