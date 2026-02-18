@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { LogOut, User, Folder, Menu, X } from "lucide-react";
@@ -9,6 +9,24 @@ export function Navbar() {
   const { user, isLoggedIn, logout } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   return (
     <>
@@ -30,14 +48,21 @@ export function Navbar() {
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-4">
               {isLoggedIn ? (
-                <div className="relative group">
-                  <button className="flex items-center gap-3 py-2 px-4 text-sm font-medium text-gray-700 hover:text-black transition-all rounded-lg hover:bg-gradient-to-r hover:from-purple-50 hover:to-blue-50 border border-transparent hover:border-purple-200">
+                <div className="relative" ref={dropdownRef}>
+                  <button
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    className={`flex items-center gap-3 py-2 px-4 text-sm font-medium transition-all rounded-lg border border-transparent hover:cursor-pointer ${
+                      isDropdownOpen
+                        ? "bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200 text-black"
+                        : "text-gray-700 hover:text-black hover:bg-gray-50"
+                    }`}
+                  >
                     <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 text-white flex items-center justify-center font-bold text-sm shadow-md">
                       {user?.name?.[0]?.toUpperCase() || "U"}
                     </div>
                     <span className="font-semibold">{user?.name}</span>
                     <svg
-                      className="w-4 h-4 text-gray-400 group-hover:text-purple-600 transition-transform group-hover:rotate-180 duration-200"
+                      className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isDropdownOpen ? "rotate-180 text-purple-600" : ""}`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -52,7 +77,13 @@ export function Navbar() {
                   </button>
 
                   {/* Dropdown User Menu */}
-                  <div className="absolute right-0 mt-3 w-56 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 hidden group-hover:block hover:block transform opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 origin-top-right z-50">
+                  <div
+                    className={`absolute right-0 mt-3 w-56 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 transition-all duration-200 origin-top-right z-50 ${
+                      isDropdownOpen
+                        ? "opacity-100 scale-100 block"
+                        : "opacity-0 scale-95 hidden"
+                    }`}
+                  >
                     <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-blue-50">
                       <p className="text-sm font-semibold text-gray-900 truncate">
                         {user?.name}
@@ -65,12 +96,16 @@ export function Navbar() {
                       <Link
                         href="/history"
                         className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors group/item"
+                        onClick={() => setIsDropdownOpen(false)}
                       >
                         <Folder className="w-4 h-4 group-hover/item:scale-110 transition-transform" />
                         <span className="font-medium">My Rooms</span>
                       </Link>
                       <button
-                        onClick={logout}
+                        onClick={() => {
+                          logout();
+                          setIsDropdownOpen(false);
+                        }}
                         className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 w-full text-left transition-colors group/item cursor-pointer"
                       >
                         <LogOut className="w-4 h-4 group-hover/item:scale-110 transition-transform" />

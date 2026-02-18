@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/context/ToastContext";
-import CustomCursor from "@/components/CustomCursor";
+
 import { AuthProvider } from "@/context/AuthContext";
 import { ConditionalNavbar } from "@/components/ConditionalNavbar";
 import { ConditionalFooter } from "@/components/ConditionalFooter";
@@ -32,7 +32,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
       >
-        <CustomCursor />
+
         <AuthProvider>
           <ToastProvider>
             <ConditionalNavbar />

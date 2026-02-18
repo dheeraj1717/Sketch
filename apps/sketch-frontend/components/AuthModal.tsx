@@ -5,6 +5,7 @@ import { X, User, Mail, Lock } from "lucide-react";
 import { API_BASE } from "@/utils/urls";
 import { apiClient } from "@/utils/apiClient";
 import { useAuth } from "@/context/AuthContext";
+import { createPortal } from "react-dom";
 
 interface AuthDTO {
   name?: string;
@@ -12,10 +13,10 @@ interface AuthDTO {
   password: string;
 }
 
-const AuthModal = ({ 
+const AuthModal = ({
   handleShowAuthModal,
-  onAuthSuccess 
-}: { 
+  onAuthSuccess,
+}: {
   handleShowAuthModal: () => void;
   onAuthSuccess?: (token: string) => void;
 }) => {
@@ -48,15 +49,7 @@ const AuthModal = ({
     setIsMounted(true);
   }, []);
 
-  if (!isMounted) {
-    return (
-      <div className="fixed inset-0 bg-purple-100/20 z-50 flex items-center justify-center">
-        <div className="bg-white p-10 rounded-2xl shadow-xl animate-pulse">
-          <div className="w-80 h-96 bg-gray-100 rounded"></div>
-        </div>
-      </div>
-    );
-  }
+  if (!isMounted) return null;
 
   const handleTabSwitch = (tab: "login" | "signup") => {
     setActiveTab(tab);
@@ -66,30 +59,31 @@ const AuthModal = ({
     try {
       setErrorString("");
       const endpoint = activeTab === "signup" ? "/auth/signup" : "/auth/signin";
-      const payload = activeTab === "signup"
-        ? {
-            name: data.name,
-            username: data.email.split("@")[0], // Simple username generation
-            email: data.email,
-            password: data.password,
-          }
-        : {
-            email: data.email,
-            password: data.password,
-          };
+      const payload =
+        activeTab === "signup"
+          ? {
+              name: data.name,
+              username: data.email.split("@")[0], // Simple username generation
+              email: data.email,
+              password: data.password,
+            }
+          : {
+              email: data.email,
+              password: data.password,
+            };
 
       const res = await apiClient.post(endpoint, payload);
 
       if (res.status === 201 || res.status === 200) {
         const accessToken = res.data.accessToken;
         let user: any = res.data.user;
-        
+
         if (!user && activeTab === "login") {
-           user = {
-              email: data.email,
-              name: "User",
-              id: "unknown"
-           }
+          user = {
+            email: data.email,
+            name: "User",
+            id: "unknown",
+          };
         }
 
         login(accessToken, user);
@@ -108,10 +102,10 @@ const AuthModal = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  const modalContent = (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
       {/* Modal */}
-      <div className="bg-white text-black p-8 rounded-2xl shadow-2xl w-full max-w-md relative transform transition-all duration-300 scale-100">
+      <div className="bg-white text-black p-8 rounded-2xl shadow-2xl w-full max-w-md relative transform transition-all duration-300 scale-100 animate-in fade-in zoom-in-95">
         <X
           className="absolute top-6 right-6 cursor-pointer text-gray-400 hover:text-gray-600 transition-colors"
           size={24}
@@ -135,7 +129,6 @@ const AuthModal = ({
 
         {/* Tab Switcher */}
         <div className="flex bg-gray-50 rounded-xl p-1 mb-6">
-         
           <button
             onClick={() => handleTabSwitch("login")}
             className={`flex-1 py-3 px-6 text-sm font-medium rounded-lg transition-all duration-200 cursor-pointer ${
@@ -146,7 +139,7 @@ const AuthModal = ({
           >
             Login
           </button>
-           <button
+          <button
             onClick={() => handleTabSwitch("signup")}
             className={`flex-1 py-3 px-6 text-sm font-medium rounded-lg transition-all duration-200 cursor-pointer ${
               activeTab === "signup"
@@ -159,10 +152,10 @@ const AuthModal = ({
         </div>
 
         {errorString && (
-            <div className="bg-red-50 text-red-500 text-sm p-3 rounded-lg mb-4 text-center">
-              {errorString}
-            </div>
-          )}
+          <div className="bg-red-50 text-red-500 text-sm p-3 rounded-lg mb-4 text-center">
+            {errorString}
+          </div>
+        )}
 
         <div className="space-y-4">
           {/* Name field - only show for signup */}
@@ -296,6 +289,8 @@ const AuthModal = ({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default AuthModal;
