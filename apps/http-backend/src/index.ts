@@ -42,8 +42,6 @@ app.use(
   })
 );
 
-// Explicitly handle pre-flight OPTIONS requests for all routes
-app.options("*", cors());
 
 app.use(express.json());
 app.use(cookieParser());
