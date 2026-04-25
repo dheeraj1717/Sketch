@@ -10,9 +10,9 @@ const app = express();
 // CORS Configuration
 // ------------------------------------------------
 const allowedOrigins = [
-  "http://localhost:3000", 
+  "http://localhost:3000",
   "http://127.0.0.1:3000",
-  process.env.FRONTEND_URL || ""
+  process.env.FRONTEND_URL || "",
 ];
 
 console.log("Allowed Origins:", allowedOrigins);
@@ -20,13 +20,17 @@ console.log("Allowed Origins:", allowedOrigins);
 app.use(
   cors({
     origin: function (origin, callback) {
+      // Allow server-to-server / same-origin requests (no Origin header)
       if (!origin) return callback(null, true);
-      
-      const normalizedOrigin = origin.replace(/\/$/, "");
-      const isAllowed = allowedOrigins.some(ao => ao && ao.replace(/\/$/, "") === normalizedOrigin);
 
-      if (isAllowed || process.env.NODE_ENV !== "production") {
-        callback(null, true);
+      const normalizedOrigin = origin.replace(/\/$/, "");
+      const isAllowed = allowedOrigins.some(
+        (ao) => ao && ao.replace(/\/$/, "") === normalizedOrigin
+      );
+
+      if (isAllowed) {
+        // Echo the exact origin — required when credentials: true
+        callback(null, origin);
       } else {
         console.log("CORS REJECTED. Origin:", origin, "Allowed:", allowedOrigins);
         callback(new Error("Not allowed by CORS"));
@@ -37,6 +41,9 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
   })
 );
+
+// Explicitly handle pre-flight OPTIONS requests for all routes
+app.options("*", cors());
 
 app.use(express.json());
 app.use(cookieParser());
